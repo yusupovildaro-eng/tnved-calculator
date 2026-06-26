@@ -1,0 +1,8 @@
+__pycache__/
+*.pyc
+gtk_docs.json
+calc.py
+viewer.py
+fix_rates.py
+.env
+*.log
