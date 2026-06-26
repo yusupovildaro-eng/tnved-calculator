@@ -6,3 +6,4 @@ viewer.py
 fix_rates.py
 .env
 *.log
+.vercel
