@@ -581,6 +581,35 @@ def country_items_json():
         ensure_ascii=False
     )
 
+def get_tree(prefix=''):
+    """Иерархическое дерево ТН ВЭД: '' → группы, '85' → позиции, '8525' → коды."""
+    conn = get_db()
+    prefix = (prefix or '').strip()
+    result = []
+    if len(prefix) == 0:
+        rows = conn.execute(
+            'SELECT SUBSTR(code,1,2) grp, COUNT(*) cnt FROM tnved GROUP BY grp ORDER BY grp'
+        ).fetchall()
+        for row in rows:
+            result.append({'prefix': row[0], 'count': row[1]})
+    elif len(prefix) == 2:
+        rows = conn.execute(
+            'SELECT SUBSTR(code,1,4) pos, COUNT(*) cnt, MIN(name_ru) name '
+            'FROM tnved WHERE code LIKE ? GROUP BY pos ORDER BY pos',
+            (prefix + '%',)
+        ).fetchall()
+        for row in rows:
+            result.append({'prefix': row[0], 'count': row[1], 'name': (row[2] or '')[:80]})
+    elif len(prefix) >= 4:
+        rows = conn.execute(
+            'SELECT code, name_ru, poshlina_pct, nds_pct FROM tnved WHERE code LIKE ? ORDER BY code',
+            (prefix + '%',)
+        ).fetchall()
+        for row in rows:
+            result.append({'code': row[0], 'name': row[1] or '', 'poshlina_pct': row[2], 'nds_pct': row[3]})
+    conn.close()
+    return result
+
 # ─── HTML PAGE ─────────────────────────────────────────────────────────────────
 PAGE = r"""<!DOCTYPE html>
 <html lang="ru">
@@ -771,6 +800,56 @@ details summary{cursor:pointer;font-size:11px;color:#1565c0;font-weight:600;marg
 details table{width:100%;border-collapse:collapse;font-size:11px;margin-top:6px}
 details td,details th{padding:3px 7px;border:1px solid #e0e0e0}
 details th{background:#f5f7fa}
+/* ══ TREE NAV ═══════════════════════════════════════════════════════════════════ */
+.tree-bc{display:flex;align-items:center;gap:6px;flex-wrap:wrap;padding:4px 0 12px;font-size:12px;min-height:28px}
+.tree-bc-item{color:#1565c0;cursor:pointer}
+.tree-bc-item:hover{text-decoration:underline}
+.tree-bc-sep{color:#bbb}
+.tree-bc-cur{color:#333;font-weight:600}
+.tree-sections{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:8px}
+.tree-sec-card{background:#f5f7ff;border:1px solid #c5cae9;border-radius:4px;padding:10px 12px;cursor:pointer;transition:background .15s}
+.tree-sec-card:hover{background:#e8eaf6;border-color:#7986cb}
+.tree-sec-num{font-size:11px;font-weight:700;color:#3949ab;margin-bottom:3px}
+.tree-sec-name{font-size:12px;color:#333;line-height:1.35}
+.tree-sec-range{font-size:10px;color:#999;margin-top:3px}
+.tree-groups{display:flex;flex-wrap:wrap;gap:7px}
+.tree-grp-btn{padding:7px 13px;border:1px solid #1565c0;border-radius:3px;background:#fff;color:#1565c0;font-size:13px;font-family:monospace;cursor:pointer;font-weight:700}
+.tree-grp-btn:hover{background:#e3f2fd}
+.tree-pos-item{display:flex;align-items:center;padding:7px 10px;border-bottom:1px solid #f0f0f0;cursor:pointer}
+.tree-pos-item:hover{background:#f0f7ff}
+.tree-pos-code{font-family:monospace;font-weight:700;color:#1565c0;width:55px;flex-shrink:0;font-size:13px}
+.tree-pos-name{flex:1;font-size:12px;color:#444;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tree-pos-cnt{font-size:11px;color:#aaa;margin-left:8px;flex-shrink:0}
+.tree-code-tbl{width:100%;border-collapse:collapse;font-size:12px}
+.tree-code-tbl th{padding:7px 10px;background:#f5f5f5;border:1px solid #e0e0e0;font-size:11px;font-weight:600;color:#666}
+.tree-code-tbl td{padding:7px 10px;border:1px solid #e0e0e0;vertical-align:top}
+.tree-code-tbl tr:hover td{background:#f0f7ff}
+.tree-code-btn{color:#1565c0;cursor:pointer;font-family:monospace;font-weight:700;background:none;border:none;font-size:12px;padding:0;text-decoration:underline}
+.tree-load{color:#888;font-size:13px;padding:24px;text-align:center}
+/* ══ PHOTO BLOCK ════════════════════════════════════════════════════════════════ */
+.photo-drop{border:2px dashed #bdbdbd;border-radius:6px;padding:32px 20px;text-align:center;color:#888;cursor:pointer;transition:border-color .2s,background .2s,color .2s}
+.photo-drop:hover,.photo-drop.drag-over{border-color:#1565c0;background:#f0f7ff;color:#1565c0}
+.photo-preview-wrap{display:none;margin:12px 0;text-align:center}
+.photo-preview-img{max-height:200px;max-width:100%;border-radius:4px;border:1px solid #e0e0e0;display:block;margin:0 auto}
+.photo-actions{display:flex;align-items:center;gap:10px;margin:10px 0;flex-wrap:wrap}
+.btn-identify{background:#1565c0;color:#fff;border:none;padding:9px 22px;border-radius:3px;font-size:13px;font-weight:700;cursor:pointer}
+.btn-identify:hover{background:#0d47a1}
+.btn-identify:disabled{background:#9e9e9e;cursor:not-allowed}
+.btn-photo-clear{background:none;border:1px solid #ef5350;color:#ef5350;padding:8px 14px;border-radius:3px;font-size:12px;cursor:pointer}
+.btn-photo-clear:hover{background:#ffebee}
+.photo-status{font-size:12px;color:#888}
+.photo-results{margin-top:10px}
+.photo-res-item{border:1px solid #e0e0e0;border-radius:4px;padding:11px 14px;margin-bottom:7px;display:flex;gap:10px;align-items:flex-start}
+.photo-res-item:hover{border-color:#90caf9;background:#fafeff}
+.photo-res-num{background:#1565c0;color:#fff;border-radius:50%;width:22px;height:22px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0;margin-top:2px}
+.photo-res-body{flex:1;min-width:0}
+.photo-res-code{font-family:monospace;font-weight:700;color:#1565c0;font-size:14px}
+.photo-res-name{font-size:12px;color:#444;margin:3px 0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.photo-res-reason{font-size:11px;color:#888;font-style:italic;line-height:1.4}
+.photo-res-duty{font-size:11px;margin-top:5px;color:#555}
+.btn-sel-code{background:#e3f2fd;border:1px solid #1565c0;color:#1565c0;padding:5px 12px;border-radius:3px;font-size:12px;cursor:pointer;font-weight:600;white-space:nowrap;flex-shrink:0;align-self:center}
+.btn-sel-code:hover{background:#bbdefb}
+.photo-warn{background:#fff8e1;border:1px solid #ffe082;border-radius:3px;padding:8px 12px;font-size:11px;color:#795548;margin-top:10px}
 </style>
 </head>
 <body>
@@ -788,6 +867,42 @@ details th{background:#f5f7fa}
 </div>
 
 <div class="main-wrap">
+
+  <!-- ── Определить товар по фото ──────────────────────────────────────────── -->
+  <div class="section collapsed" id="sec-photo">
+    <div class="sec-hdr" onclick="toggleSec('sec-photo')">
+      <span class="sec-title">📷 Определить товар по фото</span><span class="sec-arr">▲</span>
+    </div>
+    <div class="sec-body">
+      <input type="file" id="photo-file" accept="image/*" style="display:none" onchange="onPhotoSelect(event)">
+      <div class="photo-drop" id="photo-drop" onclick="document.getElementById('photo-file').click()">
+        <div style="font-size:36px;margin-bottom:6px">📷</div>
+        <div style="font-size:14px;font-weight:600">Нажмите или перетащите фото товара</div>
+        <div style="font-size:12px;margin-top:4px">JPG, PNG, WEBP</div>
+      </div>
+      <div class="photo-preview-wrap" id="photo-preview-wrap">
+        <img id="photo-preview-img" class="photo-preview-img" alt="">
+      </div>
+      <div class="photo-actions" id="photo-actions" style="display:none">
+        <button class="btn-identify" id="btn-identify" onclick="identifyPhoto()">🔍 Определить код ТН ВЭД</button>
+        <button class="btn-photo-clear" onclick="clearPhoto()">✕ Убрать</button>
+        <span class="photo-status" id="photo-status"></span>
+      </div>
+      <div id="photo-results" class="photo-results"></div>
+      <div class="photo-warn">⚠️ Определение кода по фото носит ознакомительный характер. Точный код устанавливается таможенным инспектором.</div>
+    </div>
+  </div>
+
+  <!-- ── Навигация по дереву ТН ВЭД ─────────────────────────────────────────── -->
+  <div class="section collapsed" id="sec-tree">
+    <div class="sec-hdr" onclick="openTreeSection()">
+      <span class="sec-title">🌳 Навигация по дереву ТН ВЭД</span><span class="sec-arr">▲</span>
+    </div>
+    <div class="sec-body">
+      <div id="tree-bc" class="tree-bc"></div>
+      <div id="tree-content"><div class="tree-load">Нажмите для загрузки...</div></div>
+    </div>
+  </div>
 
   <!-- ── Поиск + Направление ────────────────────────────────────────────────── -->
   <div class="wcard">
@@ -1153,6 +1268,7 @@ details th{background:#f5f7fa}
       </table>
     </div>
   </div>
+
 
 </div><!-- /main-wrap -->
 <script>
@@ -1866,6 +1982,237 @@ function deleteHistory(idx){
   setHistory(arr);
   renderHistory();
 }
+
+// ─── Tree Navigation (Вариант 10) ────────────────────────────────────────────
+var TNVED_SECS=[
+  {n:'I',r:'01-05',t:'Живые животные; продукты животного происхождения'},
+  {n:'II',r:'06-14',t:'Продукты растительного происхождения'},
+  {n:'III',r:'15-15',t:'Жиры и масла'},
+  {n:'IV',r:'16-24',t:'Готовые пищевые продукты'},
+  {n:'V',r:'25-27',t:'Минеральные продукты'},
+  {n:'VI',r:'28-38',t:'Продукция химической промышленности'},
+  {n:'VII',r:'39-40',t:'Пластмассы и каучук'},
+  {n:'VIII',r:'41-43',t:'Кожевенное сырьё; меха'},
+  {n:'IX',r:'44-46',t:'Древесина и изделия'},
+  {n:'X',r:'47-49',t:'Бумага и картон'},
+  {n:'XI',r:'50-63',t:'Текстиль и текстильные изделия'},
+  {n:'XII',r:'64-67',t:'Обувь, головные уборы, зонты'},
+  {n:'XIII',r:'68-70',t:'Камень, керамика, стекло'},
+  {n:'XIV',r:'71-71',t:'Жемчуг, драгоценные металлы'},
+  {n:'XV',r:'72-83',t:'Металлы и изделия из них'},
+  {n:'XVI',r:'84-85',t:'Машины и электрооборудование'},
+  {n:'XVII',r:'86-89',t:'Транспортные средства'},
+  {n:'XVIII',r:'90-92',t:'Приборы; часы; инструменты'},
+  {n:'XIX',r:'93-93',t:'Оружие и боеприпасы'},
+  {n:'XX',r:'94-96',t:'Разные промышленные товары'},
+  {n:'XXI',r:'97-97',t:'Произведения искусства; антиквариат'},
+];
+var treeInited=false, treeStack=[], _treeAllGroups=null;
+var _treeGroups=[], _treePositions=[], _treeCodes=[];
+
+function openTreeSection(){
+  toggleSec('sec-tree');
+  if(!treeInited&&!document.getElementById('sec-tree').classList.contains('collapsed')) treeInit();
+}
+function treeInit(){
+  treeInited=true;
+  treeStack=[];
+  _showTreeSections();
+}
+function _showTreeSections(){
+  renderTreeBc();
+  var h='<div class="tree-sections">';
+  TNVED_SECS.forEach(function(s,i){
+    h+='<div class="tree-sec-card" onclick="treeClickSec('+i+')">'
+      +'<div class="tree-sec-num">Раздел '+s.n+'</div>'
+      +'<div class="tree-sec-name">'+s.t+'</div>'
+      +'<div class="tree-sec-range">Гр. '+s.r+'</div></div>';
+  });
+  document.getElementById('tree-content').innerHTML=h+'</div>';
+}
+function treeClickSec(i){
+  var s=TNVED_SECS[i];
+  treeStack=[{type:'section',label:'Раздел '+s.n,sec:s}];
+  renderTreeBc();
+  document.getElementById('tree-content').innerHTML='<div class="tree-load">⏳ Загрузка...</div>';
+  function doRender(groups){
+    var lo=parseInt(s.r.split('-')[0]),hi=parseInt(s.r.split('-')[1]);
+    _treeGroups=groups.filter(function(g){var n=parseInt(g.prefix);return n>=lo&&n<=hi;});
+    _showTreeGroups();
+  }
+  if(_treeAllGroups){doRender(_treeAllGroups);}
+  else{fetch('/api/tree?prefix=').then(r=>r.json()).then(function(g){_treeAllGroups=g;doRender(g);});}
+}
+function _showTreeGroups(){
+  var h='<div class="tree-groups">';
+  _treeGroups.forEach(function(g,i){
+    h+='<button class="tree-grp-btn" onclick="treeClickGrp('+i+')">'+g.prefix
+      +' <span style="color:#aaa;font-weight:400;font-size:10px">('+g.count+')</span></button>';
+  });
+  document.getElementById('tree-content').innerHTML=h+'</div>';
+}
+function treeClickGrp(i){
+  var g=_treeGroups[i];
+  treeStack.push({type:'group',label:'Группа '+g.prefix,grp:g});
+  renderTreeBc();
+  document.getElementById('tree-content').innerHTML='<div class="tree-load">⏳ Загрузка...</div>';
+  fetch('/api/tree?prefix='+g.prefix).then(r=>r.json()).then(function(pos){_treePositions=pos;_showTreePositions();});
+}
+function _showTreePositions(){
+  var h='<div class="tree-pos-list">';
+  _treePositions.forEach(function(p,i){
+    h+='<div class="tree-pos-item" onclick="treeClickPos('+i+')">'
+      +'<span class="tree-pos-code">'+p.prefix+'</span>'
+      +'<span class="tree-pos-name" title="'+esc(p.name)+'">'+esc(p.name.substring(0,75))+'</span>'
+      +'<span class="tree-pos-cnt">'+p.count+'</span></div>';
+  });
+  document.getElementById('tree-content').innerHTML=h+'</div>';
+}
+function treeClickPos(i){
+  var p=_treePositions[i];
+  treeStack.push({type:'position',label:'Позиция '+p.prefix,pos:p});
+  renderTreeBc();
+  document.getElementById('tree-content').innerHTML='<div class="tree-load">⏳ Загрузка...</div>';
+  fetch('/api/tree?prefix='+p.prefix).then(r=>r.json()).then(function(codes){_treeCodes=codes;_showTreeCodes();});
+}
+function _showTreeCodes(){
+  var h='<table class="tree-code-tbl"><thead><tr>'
+      +'<th style="width:110px">Код</th><th>Наименование</th>'
+      +'<th style="width:80px;text-align:center">Пошлина</th>'
+      +'<th style="width:46px;text-align:center">НДС</th>'
+      +'</tr></thead><tbody>';
+  _treeCodes.forEach(function(c,i){
+    var d=c.poshlina_pct||0;
+    h+='<tr><td><button class="tree-code-btn" onclick="treeClickCode('+i+')">'+c.code+'</button></td>'
+      +'<td style="font-size:11px;color:#555">'+esc(c.name)+'</td>'
+      +'<td style="text-align:center;font-family:monospace;font-weight:700;color:'+(d>0?'#c62828':'#2e7d32')+'">'+d+'%</td>'
+      +'<td style="text-align:center;font-family:monospace">'+(c.nds_pct||12)+'%</td></tr>';
+  });
+  document.getElementById('tree-content').innerHTML=h+'</tbody></table>';
+}
+function treeClickCode(i){
+  var c=_treeCodes[i];
+  document.getElementById('search-inp').value=c.code+' — '+(c.name||'').substring(0,50);
+  document.getElementById('manual-code').value=c.code;
+  fetch('/api/lookup?code='+encodeURIComponent(c.code)).then(r=>r.json()).then(applyCodeInfo);
+  document.querySelector('.wcard').scrollIntoView({behavior:'smooth'});
+}
+function renderTreeBc(){
+  var el=document.getElementById('tree-bc');
+  if(!treeStack.length){el.innerHTML='';return;}
+  var h='<span class="tree-bc-item" onclick="treeNavBc(-1)">Разделы</span>';
+  treeStack.forEach(function(e,i){
+    h+='<span class="tree-bc-sep">›</span>';
+    if(i<treeStack.length-1){
+      h+='<span class="tree-bc-item" onclick="treeNavBc('+i+')">'+esc(e.label)+'</span>';
+    }else{
+      h+='<span class="tree-bc-cur">'+esc(e.label)+'</span>';
+    }
+  });
+  el.innerHTML=h;
+}
+function treeNavBc(idx){
+  if(idx<0){treeStack=[];_showTreeSections();renderTreeBc();return;}
+  treeStack=treeStack.slice(0,idx+1);
+  renderTreeBc();
+  var e=treeStack[treeStack.length-1];
+  if(e.type==='section')_showTreeGroups();
+  else if(e.type==='group')_showTreePositions();
+  else if(e.type==='position')_showTreeCodes();
+}
+
+// ─── Photo Identification (Вариант 11) ───────────────────────────────────────
+var _photoFile=null, _photoResults=[];
+
+window.addEventListener('DOMContentLoaded',function(){
+  var drop=document.getElementById('photo-drop');
+  drop.addEventListener('dragover',function(e){e.preventDefault();drop.classList.add('drag-over');});
+  drop.addEventListener('dragleave',function(){drop.classList.remove('drag-over');});
+  drop.addEventListener('drop',function(e){
+    e.preventDefault();
+    drop.classList.remove('drag-over');
+    var f=e.dataTransfer.files[0];
+    if(f&&f.type.startsWith('image/'))_loadPhotoFile(f);
+  });
+});
+function onPhotoSelect(evt){var f=evt.target.files[0];if(f)_loadPhotoFile(f);}
+function _loadPhotoFile(f){
+  _photoFile=f;
+  var r=new FileReader();
+  r.onload=function(e){
+    document.getElementById('photo-preview-img').src=e.target.result;
+    document.getElementById('photo-preview-wrap').style.display='block';
+    document.getElementById('photo-actions').style.display='flex';
+    document.getElementById('photo-results').innerHTML='';
+    document.getElementById('photo-status').textContent=f.name+' ('+Math.round(f.size/1024)+' КБ)';
+  };
+  r.readAsDataURL(f);
+}
+function clearPhoto(){
+  _photoFile=null;_photoResults=[];
+  document.getElementById('photo-preview-wrap').style.display='none';
+  document.getElementById('photo-actions').style.display='none';
+  document.getElementById('photo-results').innerHTML='';
+  document.getElementById('photo-file').value='';
+  document.getElementById('photo-status').textContent='';
+}
+function identifyPhoto(){
+  if(!_photoFile){alert('Выберите фото');return;}
+  var btn=document.getElementById('btn-identify');
+  btn.disabled=true;
+  document.getElementById('photo-status').textContent='⏳ Анализирую изображение...';
+  document.getElementById('photo-results').innerHTML='';
+  var r=new FileReader();
+  r.onload=function(e){
+    var dataUrl=e.target.result,parts=dataUrl.split(',');
+    var mt=parts[0].split(';')[0].split(':')[1],b64=parts[1];
+    fetch('/api/identify',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({image:b64,media_type:mt})
+    })
+    .then(function(res){return res.json();})
+    .then(function(data){
+      btn.disabled=false;
+      if(data.error){
+        document.getElementById('photo-status').textContent='';
+        document.getElementById('photo-results').innerHTML='<div style="color:#c62828;padding:10px;font-size:13px">⚠️ '+esc(data.error)+'</div>';
+        return;
+      }
+      document.getElementById('photo-status').textContent='Найдено '+data.codes.length+' варианта';
+      _photoResults=data.codes;
+      _renderPhotoResults();
+    })
+    .catch(function(){btn.disabled=false;document.getElementById('photo-status').textContent='Ошибка сети';});
+  };
+  r.readAsDataURL(_photoFile);
+}
+function _renderPhotoResults(){
+  var h='';
+  _photoResults.forEach(function(c,i){
+    var duty=c.poshlina_pct!==null&&c.poshlina_pct!==undefined?c.poshlina_pct+'%':'—';
+    var nds=(c.nds_pct||12)+'%';
+    h+='<div class="photo-res-item">'
+      +'<div class="photo-res-num">'+(i+1)+'</div>'
+      +'<div class="photo-res-body">'
+      +'<div class="photo-res-code">'+esc(c.code)+'</div>'
+      +'<div class="photo-res-name">'+esc(c.name)+'</div>'
+      +'<div class="photo-res-reason">'+esc(c.reason)+'</div>'
+      +'<div class="photo-res-duty">Пошлина МФН: <b>'+duty+'</b> · НДС: <b>'+nds+'</b>'
+      +(c.found_in_db?'':' <span style="color:#e65100">⚠️ не найден в базе</span>')+'</div>'
+      +'</div>'
+      +(c.found_in_db?'<button class="btn-sel-code" onclick="selectPhotoCode('+i+')">Выбрать ↗</button>':'')
+      +'</div>';
+  });
+  document.getElementById('photo-results').innerHTML=h;
+}
+function selectPhotoCode(i){
+  var c=_photoResults[i];
+  document.getElementById('search-inp').value=c.code+' — '+(c.name||'').substring(0,50);
+  document.getElementById('manual-code').value=c.code;
+  fetch('/api/lookup?code='+encodeURIComponent(c.code)).then(r=>r.json()).then(applyCodeInfo);
+  document.querySelector('.wcard').scrollIntoView({behavior:'smooth'});
+}
 </script>
 </body>
 </html>
@@ -1936,6 +2283,10 @@ class Handler(BaseHTTPRequestHandler):
             trade   = params.get('trade', '').strip()
             result  = customs_uz_lookup(code, origin, sending, trade)
             self._send_json(result)
+
+        elif path == '/api/tree':
+            prefix = params.get('prefix', '').strip()
+            self._send_json(get_tree(prefix))
 
         else:
             self._send(404, 'text/plain', b'Not found')
