@@ -677,7 +677,7 @@ body{font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans
 .dir-lbl input{accent-color:var(--primary);width:15px;height:15px;cursor:pointer}
 .cis-badge{background:var(--success-bg);color:var(--success);font-size:11px;font-weight:700;padding:4px 10px;border-radius:20px;border:1px solid var(--success-border);margin-left:6px}
 .err-msg{color:var(--danger);font-size:12px;padding:8px 14px;background:var(--danger-bg);border-radius:var(--radius-sm);margin:0 18px 12px;display:none;border:1px solid var(--danger-border)}
-#toast{position:fixed;top:24px;left:50%;transform:translateX(-50%);z-index:9999;background:#1e293b;color:#fff;padding:14px 24px;border-radius:12px;font-size:15px;box-shadow:0 8px 32px rgba(0,0,0,.25);display:none;max-width:90vw;text-align:center;line-height:1.5}
+#toast{position:fixed;top:24px;left:50%;transform:translateX(-50%);z-index:9999;background:#1e293b;color:#fff;padding:28px 48px;border-radius:16px;font-size:22px;box-shadow:0 8px 32px rgba(0,0,0,.25);display:none;max-width:90vw;text-align:center;line-height:1.6}
 
 /* ══ CODE PANEL ══ */
 #code-panel{display:none;padding:0 18px 14px}
@@ -1489,6 +1489,8 @@ function lookupManual(){
   var q=document.getElementById('manual-code').value.trim();
   if(!q) q=document.getElementById('search-inp').value.trim().split(' ')[0];
   if(!q) return;
+  // Не тратим токен если этот код уже загружен
+  if(selectedCode && selectedCode.code === q) return;
   fetch('/api/lookup?code='+encodeURIComponent(q))
     .then(r=>r.json()).then(applyCodeInfo);
 }
