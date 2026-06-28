@@ -2227,6 +2227,7 @@ input:focus{border-color:#2563eb}
     </div>
     <button class="btn" type="submit" id="btn">Войти</button>
   </form>
+  <div style="text-align:center;margin-top:16px;font-size:13px;color:#6b7280">Нет аккаунта? <a href="/register" style="color:#2563eb;text-decoration:none;font-weight:500">Зарегистрироваться</a></div>
 </div>
 <script>
 function doLogin(e){
@@ -2239,6 +2240,212 @@ function doLogin(e){
     if(d.ok){location.href='/';}
     else{err.textContent=d.error||'Неверный логин или пароль';err.style.display='block';btn.disabled=false;btn.textContent='Войти';}
   }).catch(function(){err.textContent='Ошибка сети';err.style.display='block';btn.disabled=false;btn.textContent='Войти';});
+}
+</script>
+</body>
+</html>"""
+
+REGISTER_PAGE = """<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Регистрация — ТН ВЭД Калькулятор</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:system-ui,sans-serif;background:#f0f4f8;display:flex;align-items:flex-start;justify-content:center;min-height:100vh;padding:32px 16px}
+.card{background:#fff;border-radius:16px;box-shadow:0 4px 24px rgba(0,0,0,.1);padding:36px 32px;width:100%;max-width:520px}
+.logo{text-align:center;font-size:38px;margin-bottom:6px}
+.title{text-align:center;font-size:19px;font-weight:700;color:#1a2942;margin-bottom:2px}
+.sub{text-align:center;font-size:13px;color:#6b7280;margin-bottom:24px}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+label{display:block;font-size:12px;font-weight:600;color:#374151;margin-bottom:4px}
+input{width:100%;padding:10px 12px;border:1.5px solid #d1d5db;border-radius:8px;font-size:13px;font-family:inherit;outline:none;transition:border-color .15s}
+input:focus{border-color:#2563eb}
+.field{margin-bottom:14px}
+.terms-row{display:flex;align-items:center;gap:10px;margin:16px 0 20px}
+.terms-row input[type=checkbox]{width:18px;height:18px;flex-shrink:0;cursor:pointer;accent-color:#2563eb}
+.terms-row span{font-size:13px;color:#374151}
+.terms-link{color:#2563eb;cursor:pointer;text-decoration:underline;font-weight:500}
+.btn{width:100%;padding:12px;background:#2563eb;color:#fff;border:none;border-radius:8px;font-size:15px;font-weight:700;font-family:inherit;cursor:pointer;transition:background .15s}
+.btn:hover{background:#1d4ed8}
+.btn:disabled{background:#93c5fd;cursor:not-allowed}
+.err{background:#fef2f2;border:1px solid #fca5a5;border-radius:8px;padding:10px 14px;color:#dc2626;font-size:13px;margin-bottom:16px;display:none}
+.ok{background:#f0fdf4;border:1px solid #86efac;border-radius:8px;padding:10px 14px;color:#16a34a;font-size:13px;margin-bottom:16px;display:none}
+.login-link{text-align:center;margin-top:16px;font-size:13px;color:#6b7280}
+.login-link a{color:#2563eb;text-decoration:none;font-weight:500}
+/* Модальное окно условий */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:1000;display:none;align-items:center;justify-content:center;padding:20px}
+.modal-overlay.active{display:flex}
+.modal{background:#fff;border-radius:16px;max-width:760px;width:100%;max-height:90vh;display:flex;flex-direction:column;box-shadow:0 16px 64px rgba(0,0,0,.25)}
+.modal-hdr{padding:20px 28px 16px;border-bottom:1px solid #e5e7eb;flex-shrink:0}
+.modal-hdr h2{font-size:18px;font-weight:700;color:#1a2942}
+.modal-hdr p{font-size:12px;color:#6b7280;margin-top:2px}
+.modal-body{padding:24px 28px;overflow-y:auto;flex:1;font-size:13px;color:#374151;line-height:1.75}
+.modal-body h3{font-size:14px;font-weight:700;color:#1a2942;margin:18px 0 8px}
+.modal-body h3:first-child{margin-top:0}
+.modal-body p{margin-bottom:10px}
+.modal-body ul{margin:8px 0 10px 20px}
+.modal-body ul li{margin-bottom:4px}
+.modal-ftr{padding:16px 28px;border-top:1px solid #e5e7eb;flex-shrink:0;display:flex;gap:12px;justify-content:flex-end}
+.btn-accept{padding:11px 32px;background:#2563eb;color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer}
+.btn-close{padding:11px 24px;background:#f3f4f6;color:#374151;border:none;border-radius:8px;font-size:14px;cursor:pointer}
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="logo">🛃</div>
+  <div class="title">Регистрация</div>
+  <div class="sub">Тарифный калькулятор ТН ВЭД Узбекистан</div>
+  <div class="err" id="err"></div>
+  <div class="ok" id="ok"></div>
+  <form onsubmit="doRegister(event)">
+    <div class="row2">
+      <div class="field">
+        <label>Имя *</label>
+        <input type="text" id="f_first" placeholder="Иван" required>
+      </div>
+      <div class="field">
+        <label>Фамилия *</label>
+        <input type="text" id="f_last" placeholder="Иванов" required>
+      </div>
+    </div>
+    <div class="row2">
+      <div class="field">
+        <label>ИНН организации *</label>
+        <input type="text" id="f_inn" placeholder="123456789" required>
+      </div>
+      <div class="field">
+        <label>Телефон *</label>
+        <input type="tel" id="f_phone" placeholder="+998 90 000 00 00" required>
+      </div>
+    </div>
+    <div class="field">
+      <label>Название организации *</label>
+      <input type="text" id="f_org" placeholder="ООО «Компания»" required>
+    </div>
+    <div class="field">
+      <label>Имя пользователя (логин) *</label>
+      <input type="text" id="f_user" placeholder="Латиница, без пробелов" autocomplete="username" required>
+    </div>
+    <div class="row2">
+      <div class="field">
+        <label>Пароль *</label>
+        <input type="password" id="f_pass" placeholder="Минимум 6 символов" required>
+      </div>
+      <div class="field">
+        <label>Повтор пароля *</label>
+        <input type="password" id="f_pass2" placeholder="Повторите пароль" required>
+      </div>
+    </div>
+    <div class="terms-row">
+      <input type="checkbox" id="f_terms">
+      <span>Я прочитал и принимаю <span class="terms-link" onclick="openTerms()">Условия использования</span></span>
+    </div>
+    <button class="btn" type="submit" id="btn">Зарегистрироваться</button>
+  </form>
+  <div class="login-link">Уже есть аккаунт? <a href="/login">Войти</a></div>
+</div>
+
+<!-- Модальное окно условий использования -->
+<div class="modal-overlay" id="terms-modal">
+  <div class="modal">
+    <div class="modal-hdr">
+      <h2>Условия использования сервиса</h2>
+      <p>Тарифный калькулятор ТН ВЭД Узбекистан · Редакция от 28.06.2026</p>
+    </div>
+    <div class="modal-body">
+      <h3>1. Общие положения</h3>
+      <p>Настоящие Условия использования (далее — «Условия») регулируют доступ и использование информационного сервиса «Тарифный калькулятор ТН ВЭД Узбекистан» (далее — «Сервис»), предоставляемого на сайте aloqa.uz (далее — «Компания»).</p>
+      <p>Регистрируясь в Сервисе или используя его, вы подтверждаете, что прочитали, поняли и полностью согласны с настоящими Условиями. Если вы не согласны с Условиями, вы не вправе пользоваться Сервисом.</p>
+
+      <h3>2. Информационный характер Сервиса</h3>
+      <p>Сервис предназначен <strong>исключительно для справочных и информационных целей</strong>. Данные о ставках таможенных пошлин, налогах, сборах и иных обязательных платежах, представленные в Сервисе, получены из открытых официальных источников и обновляются по мере возможности.</p>
+      <p>Сервис <strong>не является официальным источником таможенного законодательства</strong> и не заменяет консультации уполномоченных государственных органов, профессиональных таможенных брокеров или юристов.</p>
+
+      <h3>3. Ограничение ответственности</h3>
+      <p>Компания прилагает разумные усилия для обеспечения актуальности и точности информации, однако <strong>не гарантирует</strong> её полноту, достоверность, актуальность или применимость к конкретной ситуации.</p>
+      <ul>
+        <li>Компания <strong>не несёт ответственности</strong> за любые прямые, косвенные, случайные, штрафные или иные убытки, возникшие в результате использования или невозможности использования Сервиса.</li>
+        <li>Компания не несёт ответственности за финансовые потери, штрафы, санкции или иной ущерб, причинённый в связи с принятием решений на основании данных Сервиса.</li>
+        <li>Компания не несёт ответственности за неточности, ошибки или устаревшие данные в базе ТН ВЭД.</li>
+        <li>Компания не несёт ответственности за расхождение расчётов Сервиса с решениями таможенных органов Республики Узбекистан.</li>
+        <li>Результаты расчётов носят предварительный характер. Окончательные суммы таможенных платежей определяются исключительно таможенными органами.</li>
+      </ul>
+
+      <h3>4. Обязанности пользователя</h3>
+      <ul>
+        <li>Пользователь обязуется самостоятельно проверять актуальность ставок и условий на официальном портале <strong>tarif.customs.uz</strong> и в нормативных правовых актах Республики Узбекистан.</li>
+        <li>Пользователь обязуется не передавать свои учётные данные (логин и пароль) третьим лицам.</li>
+        <li>Пользователь несёт полную ответственность за все действия, совершённые с использованием его учётной записи.</li>
+        <li>Запрещается использование Сервиса в целях, противоречащих законодательству Республики Узбекистан.</li>
+      </ul>
+
+      <h3>5. Обработка персональных данных</h3>
+      <p>При регистрации Пользователь предоставляет персональные данные (имя, фамилия, ИНН, наименование организации, номер телефона, логин). Компания обрабатывает указанные данные в соответствии с Законом Республики Узбекистан «О персональных данных» исключительно в целях предоставления доступа к Сервису и улучшения его качества. Данные не передаются третьим лицам без согласия Пользователя, за исключением случаев, предусмотренных законодательством.</p>
+
+      <h3>6. Интеллектуальная собственность</h3>
+      <p>Все права на программное обеспечение, дизайн, логотипы и иные материалы Сервиса принадлежат Компании. Запрещается копирование, распространение или иное использование материалов Сервиса без письменного согласия Компании.</p>
+
+      <h3>7. Изменение условий</h3>
+      <p>Компания вправе в одностороннем порядке изменять настоящие Условия. Актуальная редакция всегда доступна в Сервисе. Продолжение использования Сервиса после публикации изменений означает согласие с новой редакцией Условий.</p>
+
+      <h3>8. Применимое право</h3>
+      <p>Настоящие Условия регулируются законодательством Республики Узбекистан. Все споры подлежат рассмотрению в судах по месту нахождения Компании.</p>
+
+      <h3>9. Контактная информация</h3>
+      <p>По вопросам, связанным с использованием Сервиса: <strong>info@aloqa.uz</strong></p>
+    </div>
+    <div class="modal-ftr">
+      <button class="btn-close" onclick="closeTerms()">Закрыть</button>
+      <button class="btn-accept" onclick="acceptTerms()">✓ Принимаю условия</button>
+    </div>
+  </div>
+</div>
+
+<script>
+function openTerms(){document.getElementById('terms-modal').classList.add('active');}
+function closeTerms(){document.getElementById('terms-modal').classList.remove('active');}
+function acceptTerms(){document.getElementById('f_terms').checked=true;closeTerms();}
+
+document.getElementById('terms-modal').addEventListener('click',function(e){
+  if(e.target===this) closeTerms();
+});
+
+function doRegister(e){
+  e.preventDefault();
+  var err=document.getElementById('err'), ok=document.getElementById('ok'), btn=document.getElementById('btn');
+  err.style.display='none'; ok.style.display='none';
+
+  var first =document.getElementById('f_first').value.trim();
+  var last  =document.getElementById('f_last').value.trim();
+  var inn   =document.getElementById('f_inn').value.trim();
+  var phone =document.getElementById('f_phone').value.trim();
+  var org   =document.getElementById('f_org').value.trim();
+  var user  =document.getElementById('f_user').value.trim();
+  var pass  =document.getElementById('f_pass').value;
+  var pass2 =document.getElementById('f_pass2').value;
+  var terms =document.getElementById('f_terms').checked;
+
+  if(pass.length<6){err.textContent='Пароль должен содержать минимум 6 символов';err.style.display='block';return;}
+  if(pass!==pass2){err.textContent='Пароли не совпадают';err.style.display='block';return;}
+  if(!terms){err.textContent='Необходимо принять условия использования';err.style.display='block';return;}
+
+  btn.disabled=true; btn.textContent='Регистрация...';
+  fetch('/api/register',{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({first_name:first,last_name:last,inn:inn,phone:phone,org:org,username:user,password:pass})
+  }).then(r=>r.json()).then(function(d){
+    if(d.ok){
+      ok.textContent='Аккаунт создан! Перенаправление...';ok.style.display='block';
+      setTimeout(function(){location.href='/login';},1500);
+    } else {
+      err.textContent=d.error||'Ошибка регистрации';err.style.display='block';
+      btn.disabled=false;btn.textContent='Зарегистрироваться';
+    }
+  }).catch(function(){
+    err.textContent='Ошибка сети';err.style.display='block';
+    btn.disabled=false;btn.textContent='Зарегистрироваться';
+  });
 }
 </script>
 </body>
@@ -2497,6 +2704,10 @@ class Handler(BaseHTTPRequestHandler):
             self._send(200, 'text/html; charset=utf-8', LOGIN_PAGE.encode())
             return
 
+        if path == '/register':
+            self._send(200, 'text/html; charset=utf-8', REGISTER_PAGE.encode())
+            return
+
         if path == '/admin':
             if self._get_user() != 'Ildar Yusupov':
                 self._redirect('/')
@@ -2603,7 +2814,39 @@ class Handler(BaseHTTPRequestHandler):
         except Exception:
             data = {}
 
-        if path == '/api/login':
+        if path == '/api/register':
+            username   = data.get('username', '').strip()
+            password   = data.get('password', '')
+            first_name = data.get('first_name', '').strip()
+            last_name  = data.get('last_name', '').strip()
+            inn        = data.get('inn', '').strip()
+            phone      = data.get('phone', '').strip()
+            org        = data.get('org', '').strip()
+            if not all([username, password, first_name, last_name, inn, phone, org]):
+                self._send_json({'ok': False, 'error': 'Заполните все обязательные поля'})
+                return
+            if len(password) < 6:
+                self._send_json({'ok': False, 'error': 'Пароль должен содержать минимум 6 символов'})
+                return
+            users = _auth.load_users()
+            if username in users:
+                self._send_json({'ok': False, 'error': 'Пользователь с таким логином уже существует'})
+                return
+            users[username] = {
+                'password':   _auth.hash_password(password),
+                'tokens':     5,
+                'created_at': datetime.date.today().isoformat(),
+                'paid_at':    None,
+                'first_name': first_name,
+                'last_name':  last_name,
+                'inn':        inn,
+                'phone':      phone,
+                'org':        org,
+            }
+            _auth.save_users(users)
+            self._send_json({'ok': True})
+
+        elif path == '/api/login':
             username = data.get('username', '').strip()
             password = data.get('password', '')
             users    = _auth.load_users()

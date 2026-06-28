@@ -14,6 +14,42 @@ def _current_user():
 def login_page():
     return Response(t.LOGIN_PAGE, mimetype='text/html; charset=utf-8')
 
+@app.route('/register')
+def register_page():
+    return Response(t.REGISTER_PAGE, mimetype='text/html; charset=utf-8')
+
+@app.route('/api/register', methods=['POST'])
+def api_register():
+    import datetime
+    data       = request.get_json(silent=True) or {}
+    username   = data.get('username', '').strip()
+    password   = data.get('password', '')
+    first_name = data.get('first_name', '').strip()
+    last_name  = data.get('last_name', '').strip()
+    inn        = data.get('inn', '').strip()
+    phone      = data.get('phone', '').strip()
+    org        = data.get('org', '').strip()
+    if not all([username, password, first_name, last_name, inn, phone, org]):
+        return jsonify({'ok': False, 'error': 'Заполните все обязательные поля'})
+    if len(password) < 6:
+        return jsonify({'ok': False, 'error': 'Пароль должен содержать минимум 6 символов'})
+    users = _auth.load_users()
+    if username in users:
+        return jsonify({'ok': False, 'error': 'Пользователь с таким логином уже существует'})
+    users[username] = {
+        'password':   _auth.hash_password(password),
+        'tokens':     5,
+        'created_at': datetime.date.today().isoformat(),
+        'paid_at':    None,
+        'first_name': first_name,
+        'last_name':  last_name,
+        'inn':        inn,
+        'phone':      phone,
+        'org':        org,
+    }
+    _auth.save_users(users)
+    return jsonify({'ok': True})
+
 @app.route('/api/login', methods=['POST'])
 def api_login():
     data     = request.get_json(silent=True) or {}
