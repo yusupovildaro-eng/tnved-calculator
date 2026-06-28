@@ -677,6 +677,7 @@ body{font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans
 .dir-lbl input{accent-color:var(--primary);width:15px;height:15px;cursor:pointer}
 .cis-badge{background:var(--success-bg);color:var(--success);font-size:11px;font-weight:700;padding:4px 10px;border-radius:20px;border:1px solid var(--success-border);margin-left:6px}
 .err-msg{color:var(--danger);font-size:12px;padding:8px 14px;background:var(--danger-bg);border-radius:var(--radius-sm);margin:0 18px 12px;display:none;border:1px solid var(--danger-border)}
+#toast{position:fixed;top:24px;left:50%;transform:translateX(-50%);z-index:9999;background:#1e293b;color:#fff;padding:14px 24px;border-radius:12px;font-size:15px;box-shadow:0 8px 32px rgba(0,0,0,.25);display:none;max-width:90vw;text-align:center;line-height:1.5}
 
 /* ══ CODE PANEL ══ */
 #code-panel{display:none;padding:0 18px 14px}
@@ -912,6 +913,7 @@ details tr:hover td{background:var(--gray-50)}
       <span id="cis-badge" class="cis-badge" style="display:none">ЗСТ СНГ — 0%</span>
     </div>
     <div id="code-error" class="err-msg">Код не найден в базе ТН ВЭД</div>
+  <div id="toast"></div>
     <div id="code-panel">
       <div class="cp-code" id="cp-code"></div>
       <div class="cp-name" id="cp-name"></div>
@@ -1495,9 +1497,25 @@ function lookupManual(){
 var UNIT_LBL={kg:'кг',liter:'л',liter_alc:'л спирта',m2:'м²',item:'шт.',pair:'пар',cc:'куб.см',per1000:'тыс.шт.'};
 var AKSIZ_LBL={per1000:'тыс.шт.',liter:'л',liter_alc:'л спирта',kg:'кг',ml:'мл',item:'шт.'};
 
+var _toastTimer=null;
+function showToast(msg,ms){
+  var t=document.getElementById('toast');
+  t.innerHTML=msg;t.style.display='block';
+  clearTimeout(_toastTimer);
+  _toastTimer=setTimeout(function(){t.style.display='none';},ms||5000);
+}
+
 function applyCodeInfo(data){
   var errEl=document.getElementById('code-error');
-  if(!data||data.error){errEl.style.display='block';selectedCode=null;document.getElementById('code-panel').style.display='none';return;}
+  if(!data||data.error){
+    if(data&&data.error==='no_tokens'){
+      showToast('🚫 У вас закончились запросы.<br>Пополните баланс для продолжения.',6000);
+      document.getElementById('code-panel').style.display='none';
+    } else {
+      errEl.style.display='block';
+    }
+    selectedCode=null;document.getElementById('code-panel').style.display='none';return;
+  }
   errEl.style.display='none';
   selectedCode=data;
   customsData=null;
