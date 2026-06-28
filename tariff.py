@@ -2565,11 +2565,19 @@ function tokHtml(t){
 function renderTable(users){
   var w=document.getElementById('tbl-wrap');
   if(!users||!users.length){w.innerHTML='<div class="empty">Нет пользователей</div>';return;}
-  var h='<table><thead><tr><th>Пользователь</th><th>Запросы</th><th>Добавлен</th><th>Дата оплаты</th><th>Срок до</th><th>Осталось дней</th><th></th></tr></thead><tbody>';
+  var h='<table><thead><tr>'
+    +'<th>Логин</th><th>Имя Фамилия</th><th>Организация</th><th>ИНН</th><th>Телефон</th>'
+    +'<th>Запросы</th><th>Добавлен</th><th>Дата оплаты</th><th>Срок до</th><th>Дней</th><th></th>'
+    +'</tr></thead><tbody>';
   users.forEach(function(u){
     var uid=encodeURIComponent(u.username);
+    var fullname=((u.first_name||'')+' '+(u.last_name||'')).trim()||'—';
     h+='<tr id="row-'+uid+'">'
-      +'<td>'+esc(u.username)+'</td>'
+      +'<td><b>'+esc(u.username)+'</b></td>'
+      +'<td>'+esc(fullname)+'</td>'
+      +'<td>'+(u.org?esc(u.org):'—')+'</td>'
+      +'<td>'+(u.inn||'—')+'</td>'
+      +'<td>'+(u.phone||'—')+'</td>'
       +'<td>'+tokHtml(u.tokens)+'</td>'
       +'<td>'+(u.created_at||'—')+'</td>'
       +'<td>'+(u.paid_at||'—')+'</td>'
@@ -2579,11 +2587,15 @@ function renderTable(users){
       +'<button class="btn-edit" data-u="'+esc(u.username)+'" onclick="toggleEdit(this)">Изменить</button>'
       +'<button class="btn-del" data-u="'+esc(u.username)+'" onclick="delUser(this)">Удалить</button>'
       +'</div></td></tr>'
-      +'<tr class="erow" id="erow-'+uid+'" style="display:none"><td colspan="7">'
-      +'<span style="font-weight:600;margin-right:16px;color:#374151">'+esc(u.username)+'</span>'
-      +'Запросы:&nbsp;<input class="ei" type="number" min="0" placeholder="∞" id="et-'+uid+'" value="'+(u.tokens!==null&&u.tokens!==undefined?u.tokens:'')+'" style="width:80px;margin-right:12px">'
-      +'Дата оплаты:&nbsp;<input class="ei" type="date" id="ep-'+uid+'" value="'+(u.paid_at||'')+'" style="width:140px;margin-right:12px">'
+      +'<tr class="erow" id="erow-'+uid+'" style="display:none"><td colspan="11" style="padding:12px 16px;background:#f8faff">'
+      +'<div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center">'
+      +'<span style="font-weight:700;color:#1a2942;margin-right:4px">'+esc(u.username)+'</span>'
+      +'<label style="font-size:12px;color:#6b7280">Запросы:</label>'
+      +'<input class="ei" type="number" min="0" placeholder="∞" id="et-'+uid+'" value="'+(u.tokens!==null&&u.tokens!==undefined?u.tokens:'')+'" style="width:70px">'
+      +'<label style="font-size:12px;color:#6b7280">Дата оплаты:</label>'
+      +'<input class="ei" type="date" id="ep-'+uid+'" value="'+(u.paid_at||'')+'" style="width:140px">'
       +'<button class="btn-save" data-u="'+esc(u.username)+'" onclick="saveEdit(this)">Сохранить</button>'
+      +'</div>'
       +'</td></tr>';
   });
   h+='</tbody></table>';

@@ -145,6 +145,11 @@ def get_users_with_meta():
             'paid_at':    paid_at,
             'expires_at': expires_at,
             'days_left':  days_left,
+            'first_name': data.get('first_name', ''),
+            'last_name':  data.get('last_name', ''),
+            'inn':        data.get('inn', ''),
+            'phone':      data.get('phone', ''),
+            'org':        data.get('org', ''),
         })
     result.sort(key=lambda x: x['username'])
     return result
