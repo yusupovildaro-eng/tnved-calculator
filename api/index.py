@@ -40,13 +40,21 @@ def index():
     user = _current_user()
     if not user:
         return redirect('/login')
+    admin_link = '<a href="/admin">Пользователи</a>' if user == ADMIN_USER else ''
     html = t.PAGE.replace('COUNTRIES_JSON_PLACEHOLDER', t.country_items_json())
     html = html.replace('CURRENT_USER_PLACEHOLDER', user)
+    html = html.replace('ADMIN_LINK_PLACEHOLDER', admin_link)
     return Response(html, mimetype='text/html; charset=utf-8')
+
+ADMIN_USER = 'Ildar Yusupov'
 
 def _require_auth():
     if not _current_user():
         return jsonify({'error': 'unauthorized'}), 401
+
+def _require_admin():
+    if _current_user() != ADMIN_USER:
+        return jsonify({'error': 'forbidden'}), 403
 
 @app.route('/api/lookup')
 def api_lookup():
@@ -116,19 +124,19 @@ def api_tree():
 
 @app.route('/admin')
 def admin_page():
-    if not _current_user():
-        return redirect('/login')
+    if _current_user() != ADMIN_USER:
+        return redirect('/')
     return Response(t.ADMIN_PAGE, mimetype='text/html; charset=utf-8')
 
 @app.route('/api/admin/users')
 def admin_users():
-    if err := _require_auth(): return err
+    if err := _require_admin(): return err
     users = _auth.load_users()
     return jsonify({'users': sorted(users.keys())})
 
 @app.route('/api/admin/add', methods=['POST'])
 def admin_add():
-    if err := _require_auth(): return err
+    if err := _require_admin(): return err
     import hashlib, os
     data     = request.get_json(silent=True) or {}
     username = data.get('username', '').strip()
@@ -144,7 +152,7 @@ def admin_add():
 
 @app.route('/api/admin/delete', methods=['POST'])
 def admin_delete():
-    if err := _require_auth(): return err
+    if err := _require_admin(): return err
     data     = request.get_json(silent=True) or {}
     username = data.get('username', '').strip()
     users    = _auth.load_users()

@@ -874,7 +874,7 @@ details tr:hover td{background:var(--gray-50)}
   <div class="hdr-nav">
     <span class="ftr-user">👤 CURRENT_USER_PLACEHOLDER</span>
     <div class="ftr-sep"></div>
-    <a href="/admin">Пользователи</a>
+    ADMIN_LINK_PLACEHOLDER
     <a href="/logout">Выйти</a>
   </div>
 </div>
@@ -2301,15 +2301,15 @@ class Handler(BaseHTTPRequestHandler):
             return
 
         if path == '/admin':
-            if not self._get_user():
-                self._redirect('/login')
+            if self._get_user() != 'Ildar Yusupov':
+                self._redirect('/')
                 return
             self._send(200, 'text/html; charset=utf-8', ADMIN_PAGE.encode())
             return
 
         if path == '/api/admin/users':
-            if not self._get_user():
-                self._send_json({'error': 'unauthorized'})
+            if self._get_user() != 'Ildar Yusupov':
+                self._send_json({'error': 'forbidden'})
                 return
             users = _auth.load_users()
             self._send_json({'users': sorted(users.keys())})
@@ -2327,8 +2327,11 @@ class Handler(BaseHTTPRequestHandler):
             return
 
         if path in ('/', '/tariff'):
+            user = self._get_user() or ''
+            admin_link = '<a href="/admin">Пользователи</a>' if user == 'Ildar Yusupov' else ''
             html = PAGE.replace('COUNTRIES_JSON_PLACEHOLDER', country_items_json())
-            html = html.replace('CURRENT_USER_PLACEHOLDER', self._get_user() or '')
+            html = html.replace('CURRENT_USER_PLACEHOLDER', user)
+            html = html.replace('ADMIN_LINK_PLACEHOLDER', admin_link)
             self._send(200, 'text/html; charset=utf-8', html.encode())
 
         elif path == '/api/lookup':
@@ -2415,8 +2418,8 @@ class Handler(BaseHTTPRequestHandler):
                 self._send_json({'ok': False, 'error': 'Неверный логин или пароль'})
 
         elif path == '/api/admin/add':
-            if not self._get_user():
-                self._send_json({'ok': False, 'error': 'unauthorized'})
+            if self._get_user() != 'Ildar Yusupov':
+                self._send_json({'ok': False, 'error': 'forbidden'})
                 return
             username = data.get('username', '').strip()
             password = data.get('password', '')
@@ -2432,8 +2435,8 @@ class Handler(BaseHTTPRequestHandler):
             self._send_json({'ok': True})
 
         elif path == '/api/admin/delete':
-            if not self._get_user():
-                self._send_json({'ok': False, 'error': 'unauthorized'})
+            if self._get_user() != 'Ildar Yusupov':
+                self._send_json({'ok': False, 'error': 'forbidden'})
                 return
             username = data.get('username', '').strip()
             users = _auth.load_users()
