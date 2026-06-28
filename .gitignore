@@ -7,3 +7,4 @@ fix_rates.py
 .env
 *.log
 .vercel
+.env*
