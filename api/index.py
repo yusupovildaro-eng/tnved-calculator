@@ -114,3 +114,45 @@ def api_tree():
     prefix = request.args.get('prefix', '').strip()
     return jsonify(t.get_tree(prefix))
 
+@app.route('/admin')
+def admin_page():
+    if not _current_user():
+        return redirect('/login')
+    return Response(t.ADMIN_PAGE, mimetype='text/html; charset=utf-8')
+
+@app.route('/api/admin/users')
+def admin_users():
+    if err := _require_auth(): return err
+    users = _auth.load_users()
+    return jsonify({'users': sorted(users.keys())})
+
+@app.route('/api/admin/add', methods=['POST'])
+def admin_add():
+    if err := _require_auth(): return err
+    import hashlib, os
+    data     = request.get_json(silent=True) or {}
+    username = data.get('username', '').strip()
+    password = data.get('password', '')
+    if not username or not password:
+        return jsonify({'ok': False, 'error': 'Укажите логин и пароль'})
+    users = _auth.load_users()
+    salt  = os.urandom(16)
+    key   = hashlib.pbkdf2_hmac('sha256', password.encode(), salt, 100000)
+    users[username] = f"pbkdf2:{salt.hex()}:{key.hex()}"
+    with open(_auth.USERS_FILE, 'w', encoding='utf-8') as f:
+        import json; json.dump(users, f, indent=2, ensure_ascii=False)
+    return jsonify({'ok': True})
+
+@app.route('/api/admin/delete', methods=['POST'])
+def admin_delete():
+    if err := _require_auth(): return err
+    data     = request.get_json(silent=True) or {}
+    username = data.get('username', '').strip()
+    users    = _auth.load_users()
+    if username not in users:
+        return jsonify({'ok': False, 'error': 'Пользователь не найден'})
+    del users[username]
+    with open(_auth.USERS_FILE, 'w', encoding='utf-8') as f:
+        import json; json.dump(users, f, indent=2, ensure_ascii=False)
+    return jsonify({'ok': True})
+

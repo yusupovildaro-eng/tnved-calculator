@@ -874,6 +874,7 @@ details tr:hover td{background:var(--gray-50)}
   <div class="hdr-nav">
     <span class="ftr-user">👤 CURRENT_USER_PLACEHOLDER</span>
     <div class="ftr-sep"></div>
+    <a href="/admin">Пользователи</a>
     <a href="/logout">Выйти</a>
   </div>
 </div>
@@ -2175,6 +2176,107 @@ function doLogin(e){
 </html>"""
 
 
+ADMIN_PAGE = """<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Пользователи — ТН ВЭД</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:system-ui,sans-serif;background:#f0f4f8;min-height:100vh}
+.hdr{background:linear-gradient(135deg,#1D4ED8 0%,#2563EB 60%,#3B82F6 100%);color:#fff;padding:14px 24px;display:flex;align-items:center;gap:12px;box-shadow:0 2px 12px rgba(37,99,235,.35)}
+.hdr-title{font-size:16px;font-weight:700}
+.hdr-back{margin-left:auto;color:rgba(255,255,255,.9);text-decoration:none;font-size:12px;font-weight:500;padding:6px 14px;border:1px solid rgba(255,255,255,.3);border-radius:6px;transition:all .15s}
+.hdr-back:hover{background:rgba(255,255,255,.2)}
+.wrap{max-width:560px;margin:32px auto;padding:0 16px}
+.card{background:#fff;border-radius:12px;box-shadow:0 2px 12px rgba(0,0,0,.08);padding:24px;margin-bottom:24px}
+.card-title{font-size:15px;font-weight:700;color:#1a2942;margin-bottom:16px;padding-bottom:12px;border-bottom:1px solid #e5e7eb}
+.user-row{display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid #f3f4f6}
+.user-row:last-child{border-bottom:none}
+.user-name{font-size:14px;font-weight:500;color:#374151}
+.btn-del{background:none;border:1.5px solid #fca5a5;color:#dc2626;padding:5px 12px;border-radius:6px;font-size:12px;font-family:inherit;cursor:pointer;transition:all .15s}
+.btn-del:hover{background:#fef2f2}
+.empty{color:#9ca3af;font-size:13px;text-align:center;padding:16px 0}
+label{display:block;font-size:13px;font-weight:600;color:#374151;margin-bottom:6px;margin-top:14px}
+label:first-child{margin-top:0}
+input{width:100%;padding:10px 14px;border:1.5px solid #d1d5db;border-radius:8px;font-size:14px;font-family:inherit;outline:none;transition:border-color .15s}
+input:focus{border-color:#2563eb}
+.btn-add{width:100%;padding:11px;background:#2563eb;color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:700;font-family:inherit;cursor:pointer;margin-top:16px;transition:background .15s}
+.btn-add:hover{background:#1d4ed8}
+.btn-add:disabled{background:#93c5fd;cursor:not-allowed}
+.msg{border-radius:8px;padding:10px 14px;font-size:13px;margin-top:12px;display:none}
+.msg.ok{background:#f0fdf4;border:1px solid #86efac;color:#15803d}
+.msg.err{background:#fef2f2;border:1px solid #fca5a5;color:#dc2626}
+</style>
+</head>
+<body>
+<div class="hdr">
+  <span style="font-size:22px">🛃</span>
+  <div class="hdr-title">Управление пользователями</div>
+  <a class="hdr-back" href="/">← На сайт</a>
+</div>
+<div class="wrap">
+  <div class="card">
+    <div class="card-title">Пользователи</div>
+    <div id="user-list"><div class="empty">Загрузка...</div></div>
+  </div>
+  <div class="card">
+    <div class="card-title">Добавить пользователя</div>
+    <form onsubmit="addUser(event)">
+      <label for="nu">Логин</label>
+      <input type="text" id="nu" required autocomplete="off">
+      <label for="np">Пароль</label>
+      <input type="password" id="np" required autocomplete="new-password">
+      <button class="btn-add" type="submit" id="btn-add">Добавить</button>
+    </form>
+    <div class="msg" id="msg"></div>
+  </div>
+</div>
+<script>
+function loadUsers(){
+  fetch('/api/admin/users').then(function(r){return r.json();}).then(function(d){
+    var el=document.getElementById('user-list');
+    if(!d.users||!d.users.length){el.innerHTML='<div class="empty">Нет пользователей</div>';return;}
+    el.innerHTML=d.users.map(function(u){
+      return '<div class="user-row"><span class="user-name">'+esc(u)+'</span>'
+        +'<button class="btn-del" onclick="delUser('+JSON.stringify(u)+')">Удалить</button></div>';
+    }).join('');
+  });
+}
+function esc(s){var d=document.createElement('div');d.textContent=s;return d.innerHTML;}
+function showMsg(text,ok){
+  var m=document.getElementById('msg');
+  m.textContent=text;m.className='msg '+(ok?'ok':'err');m.style.display='block';
+  setTimeout(function(){m.style.display='none';},3000);
+}
+function addUser(e){
+  e.preventDefault();
+  var btn=document.getElementById('btn-add');
+  btn.disabled=true;btn.textContent='Добавляю...';
+  fetch('/api/admin/add',{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({username:document.getElementById('nu').value,password:document.getElementById('np').value})
+  }).then(function(r){return r.json();}).then(function(d){
+    btn.disabled=false;btn.textContent='Добавить';
+    if(d.ok){document.getElementById('nu').value='';document.getElementById('np').value='';loadUsers();showMsg('Пользователь добавлен',true);}
+    else{showMsg(d.error||'Ошибка',false);}
+  }).catch(function(){btn.disabled=false;btn.textContent='Добавить';showMsg('Ошибка сети',false);});
+}
+function delUser(u){
+  if(!confirm('Удалить пользователя «'+u+'»?'))return;
+  fetch('/api/admin/delete',{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({username:u})
+  }).then(function(r){return r.json();}).then(function(d){
+    if(d.ok){loadUsers();showMsg('Пользователь удалён',true);}
+    else{showMsg(d.error||'Ошибка',false);}
+  });
+}
+loadUsers();
+</script>
+</body>
+</html>"""
+
+
 class Handler(BaseHTTPRequestHandler):
 
     def log_message(self, fmt, *args):
@@ -2196,6 +2298,21 @@ class Handler(BaseHTTPRequestHandler):
 
         if path == '/login':
             self._send(200, 'text/html; charset=utf-8', LOGIN_PAGE.encode())
+            return
+
+        if path == '/admin':
+            if not self._get_user():
+                self._redirect('/login')
+                return
+            self._send(200, 'text/html; charset=utf-8', ADMIN_PAGE.encode())
+            return
+
+        if path == '/api/admin/users':
+            if not self._get_user():
+                self._send_json({'error': 'unauthorized'})
+                return
+            users = _auth.load_users()
+            self._send_json({'users': sorted(users.keys())})
             return
 
         if path == '/logout':
@@ -2296,6 +2413,39 @@ class Handler(BaseHTTPRequestHandler):
                 self.wfile.write(resp)
             else:
                 self._send_json({'ok': False, 'error': 'Неверный логин или пароль'})
+
+        elif path == '/api/admin/add':
+            if not self._get_user():
+                self._send_json({'ok': False, 'error': 'unauthorized'})
+                return
+            username = data.get('username', '').strip()
+            password = data.get('password', '')
+            if not username or not password:
+                self._send_json({'ok': False, 'error': 'Укажите логин и пароль'})
+                return
+            users = _auth.load_users()
+            import hashlib as _hl, os as _os
+            salt = _os.urandom(16)
+            key  = _hl.pbkdf2_hmac('sha256', password.encode(), salt, 100000)
+            users[username] = f"pbkdf2:{salt.hex()}:{key.hex()}"
+            with open(_auth.USERS_FILE, 'w', encoding='utf-8') as f:
+                json.dump(users, f, indent=2, ensure_ascii=False)
+            self._send_json({'ok': True})
+
+        elif path == '/api/admin/delete':
+            if not self._get_user():
+                self._send_json({'ok': False, 'error': 'unauthorized'})
+                return
+            username = data.get('username', '').strip()
+            users = _auth.load_users()
+            if username not in users:
+                self._send_json({'ok': False, 'error': 'Пользователь не найден'})
+                return
+            del users[username]
+            with open(_auth.USERS_FILE, 'w', encoding='utf-8') as f:
+                json.dump(users, f, indent=2, ensure_ascii=False)
+            self._send_json({'ok': True})
+
         else:
             self._send(404, 'text/plain', b'Not found')
 
