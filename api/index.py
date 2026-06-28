@@ -40,6 +40,10 @@ def index():
     user = _current_user()
     if not user:
         return redirect('/login')
+    allowed, reason = _auth.can_access(user)
+    if not allowed:
+        html = t.BLOCKED_PAGE.replace('CURRENT_USER_PLACEHOLDER', user)
+        return Response(html, mimetype='text/html; charset=utf-8')
     admin_link = '<a href="/admin">Пользователи</a>' if user == ADMIN_USER else ''
     html = t.PAGE.replace('COUNTRIES_JSON_PLACEHOLDER', t.country_items_json())
     html = html.replace('CURRENT_USER_PLACEHOLDER', user)
@@ -59,6 +63,8 @@ def _require_admin():
 @app.route('/api/lookup')
 def api_lookup():
     if err := _require_auth(): return err
+    if not _auth.use_token(_current_user()):
+        return jsonify({'error': 'no_tokens'}), 403
     code = request.args.get('code', '').strip()
     conn = t.get_db()
     row = conn.execute('SELECT * FROM tnved WHERE code=?', (code,)).fetchone()
@@ -131,22 +137,37 @@ def admin_page():
 @app.route('/api/admin/users')
 def admin_users():
     if err := _require_admin(): return err
-    users = _auth.load_users()
-    return jsonify({'users': sorted(users.keys())})
+    return jsonify({'users': _auth.get_users_with_meta()})
 
 @app.route('/api/admin/add', methods=['POST'])
 def admin_add():
     if err := _require_admin(): return err
-    import hashlib, os
+    import datetime
     data     = request.get_json(silent=True) or {}
     username = data.get('username', '').strip()
     password = data.get('password', '')
     if not username or not password:
         return jsonify({'ok': False, 'error': 'Укажите логин и пароль'})
-    salt  = os.urandom(16)
-    key   = hashlib.pbkdf2_hmac('sha256', password.encode(), salt, 100000)
     users = _auth.load_users()
-    users[username] = f"pbkdf2:{salt.hex()}:{key.hex()}"
+    users[username] = {
+        'password':   _auth.hash_password(password),
+        'tokens':     data.get('tokens'),
+        'created_at': datetime.date.today().isoformat(),
+        'paid_at':    data.get('paid_at'),
+    }
+    _auth.save_users(users)
+    return jsonify({'ok': True})
+
+@app.route('/api/admin/update', methods=['POST'])
+def admin_update():
+    if err := _require_admin(): return err
+    data     = request.get_json(silent=True) or {}
+    username = data.get('username', '').strip()
+    users    = _auth.load_users()
+    if username not in users:
+        return jsonify({'ok': False, 'error': 'Пользователь не найден'})
+    users[username]['tokens']  = data.get('tokens')
+    users[username]['paid_at'] = data.get('paid_at')
     _auth.save_users(users)
     return jsonify({'ok': True})
 

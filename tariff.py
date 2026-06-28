@@ -4,7 +4,7 @@
 python3 tariff.py        → http://localhost:5002
 python3 tariff.py 5003   → другой порт
 """
-import sys, json, sqlite3, os, re, ssl
+import sys, json, sqlite3, os, re, ssl, datetime
 from http.server import HTTPServer, BaseHTTPRequestHandler
 from urllib.parse import parse_qs, urlparse, urlencode
 import urllib.request
@@ -2186,96 +2186,224 @@ ADMIN_PAGE = """<!DOCTYPE html>
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:system-ui,sans-serif;background:#f0f4f8;min-height:100vh}
 .hdr{background:linear-gradient(135deg,#1D4ED8 0%,#2563EB 60%,#3B82F6 100%);color:#fff;padding:14px 24px;display:flex;align-items:center;gap:12px;box-shadow:0 2px 12px rgba(37,99,235,.35)}
-.hdr-title{font-size:16px;font-weight:700}
 .hdr-back{margin-left:auto;color:rgba(255,255,255,.9);text-decoration:none;font-size:12px;font-weight:500;padding:6px 14px;border:1px solid rgba(255,255,255,.3);border-radius:6px;transition:all .15s}
 .hdr-back:hover{background:rgba(255,255,255,.2)}
-.wrap{max-width:560px;margin:32px auto;padding:0 16px}
+.wrap{max-width:900px;margin:28px auto;padding:0 16px}
 .card{background:#fff;border-radius:12px;box-shadow:0 2px 12px rgba(0,0,0,.08);padding:24px;margin-bottom:24px}
 .card-title{font-size:15px;font-weight:700;color:#1a2942;margin-bottom:16px;padding-bottom:12px;border-bottom:1px solid #e5e7eb}
-.user-row{display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid #f3f4f6}
-.user-row:last-child{border-bottom:none}
-.user-name{font-size:14px;font-weight:500;color:#374151}
-.btn-del{background:none;border:1.5px solid #fca5a5;color:#dc2626;padding:5px 12px;border-radius:6px;font-size:12px;font-family:inherit;cursor:pointer;transition:all .15s}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{padding:8px 12px;background:#f9fafb;border-bottom:2px solid #e5e7eb;text-align:left;font-weight:600;color:#6b7280;font-size:11px;text-transform:uppercase;letter-spacing:.4px;white-space:nowrap}
+td{padding:10px 12px;border-bottom:1px solid #f3f4f6;vertical-align:middle}
+tr:last-child td{border-bottom:none}
+.badge-inf{font-size:20px;color:#2563eb;font-weight:700;line-height:1}
+.badge-num{font-weight:700;color:#1a2942;font-size:14px}
+.badge-zero{font-weight:700;color:#dc2626;font-size:14px}
+.days-ok{color:#15803d;font-weight:600}
+.days-warn{color:#d97706;font-weight:600}
+.days-bad{color:#dc2626;font-weight:600}
+.days-none{color:#9ca3af}
+.btn-del{background:none;border:1.5px solid #fca5a5;color:#dc2626;padding:5px 10px;border-radius:6px;font-size:11px;font-family:inherit;cursor:pointer;transition:all .15s}
 .btn-del:hover{background:#fef2f2}
-.empty{color:#9ca3af;font-size:13px;text-align:center;padding:16px 0}
+.btn-edit{background:none;border:1.5px solid #93c5fd;color:#2563eb;padding:5px 10px;border-radius:6px;font-size:11px;font-family:inherit;cursor:pointer;transition:all .15s}
+.btn-edit:hover{background:#eff6ff}
+.btn-save{background:#2563eb;border:none;color:#fff;padding:5px 10px;border-radius:6px;font-size:11px;font-family:inherit;cursor:pointer}
+.btn-save:hover{background:#1d4ed8}
+.erow td{background:#eff6ff!important;padding:8px 12px}
+.ei{padding:5px 8px;border:1.5px solid #93c5fd;border-radius:5px;font-size:12px;font-family:inherit;outline:none}
+.ei:focus{border-color:#2563eb}
 label{display:block;font-size:13px;font-weight:600;color:#374151;margin-bottom:6px;margin-top:14px}
 label:first-child{margin-top:0}
-input{width:100%;padding:10px 14px;border:1.5px solid #d1d5db;border-radius:8px;font-size:14px;font-family:inherit;outline:none;transition:border-color .15s}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+input[type=text],input[type=password],input[type=number],input[type=date]{width:100%;padding:10px 14px;border:1.5px solid #d1d5db;border-radius:8px;font-size:14px;font-family:inherit;outline:none;transition:border-color .15s}
 input:focus{border-color:#2563eb}
 .btn-add{width:100%;padding:11px;background:#2563eb;color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:700;font-family:inherit;cursor:pointer;margin-top:16px;transition:background .15s}
 .btn-add:hover{background:#1d4ed8}
 .btn-add:disabled{background:#93c5fd;cursor:not-allowed}
+.hint{font-size:11px;color:#9ca3af;margin-top:4px}
 .msg{border-radius:8px;padding:10px 14px;font-size:13px;margin-top:12px;display:none}
 .msg.ok{background:#f0fdf4;border:1px solid #86efac;color:#15803d}
 .msg.err{background:#fef2f2;border:1px solid #fca5a5;color:#dc2626}
+.empty{color:#9ca3af;font-size:13px;text-align:center;padding:20px 0}
+.act{display:flex;gap:6px;white-space:nowrap}
 </style>
 </head>
 <body>
 <div class="hdr">
   <span style="font-size:22px">🛃</span>
-  <div class="hdr-title">Управление пользователями</div>
+  <span style="font-size:16px;font-weight:700">Управление пользователями</span>
   <a class="hdr-back" href="/">← На сайт</a>
 </div>
 <div class="wrap">
   <div class="card">
     <div class="card-title">Пользователи</div>
-    <div id="user-list"><div class="empty">Загрузка...</div></div>
+    <div id="tbl-wrap"><div class="empty">Загрузка...</div></div>
   </div>
   <div class="card">
     <div class="card-title">Добавить пользователя</div>
     <form onsubmit="addUser(event)">
-      <label for="nu">Логин</label>
-      <input type="text" id="nu" required autocomplete="off">
-      <label for="np">Пароль</label>
-      <input type="password" id="np" required autocomplete="new-password">
+      <div class="form-row">
+        <div>
+          <label for="nu">Логин</label>
+          <input type="text" id="nu" required autocomplete="off">
+        </div>
+        <div>
+          <label for="np">Пароль</label>
+          <input type="password" id="np" required autocomplete="new-password">
+        </div>
+      </div>
+      <div class="form-row">
+        <div>
+          <label for="nt">Количество запросов</label>
+          <input type="number" id="nt" min="0" placeholder="∞ — не ограничено">
+          <div class="hint">Оставьте пустым для безлимитного доступа</div>
+        </div>
+        <div>
+          <label for="nd">Дата оплаты</label>
+          <input type="date" id="nd">
+          <div class="hint">Срок действия — 30 дней от даты оплаты</div>
+        </div>
+      </div>
       <button class="btn-add" type="submit" id="btn-add">Добавить</button>
     </form>
     <div class="msg" id="msg"></div>
   </div>
 </div>
 <script>
+function esc(s){var d=document.createElement('div');d.textContent=s;return d.innerHTML;}
+function showMsg(t,ok){
+  var m=document.getElementById('msg');
+  m.textContent=t;m.className='msg '+(ok?'ok':'err');m.style.display='block';
+  setTimeout(function(){m.style.display='none';},3500);
+}
+function daysHtml(n){
+  if(n===null||n===undefined)return '<span class="days-none">—</span>';
+  if(n<=0)return '<span class="days-bad">Истёк</span>';
+  if(n<=7)return '<span class="days-warn">'+n+'</span>';
+  return '<span class="days-ok">'+n+'</span>';
+}
+function tokHtml(t){
+  if(t===null||t===undefined)return '<span class="badge-inf">∞</span>';
+  if(t===0)return '<span class="badge-zero">0</span>';
+  return '<span class="badge-num">'+t+'</span>';
+}
+function renderTable(users){
+  var w=document.getElementById('tbl-wrap');
+  if(!users||!users.length){w.innerHTML='<div class="empty">Нет пользователей</div>';return;}
+  var h='<table><thead><tr><th>Пользователь</th><th>Запросы</th><th>Добавлен</th><th>Дата оплаты</th><th>Срок до</th><th>Осталось дней</th><th></th></tr></thead><tbody>';
+  users.forEach(function(u){
+    var uid=encodeURIComponent(u.username);
+    h+='<tr id="row-'+uid+'">'
+      +'<td>'+esc(u.username)+'</td>'
+      +'<td>'+tokHtml(u.tokens)+'</td>'
+      +'<td>'+(u.created_at||'—')+'</td>'
+      +'<td>'+(u.paid_at||'—')+'</td>'
+      +'<td>'+(u.expires_at||'—')+'</td>'
+      +'<td>'+daysHtml(u.days_left)+'</td>'
+      +'<td><div class="act">'
+      +'<button class="btn-edit" data-u="'+esc(u.username)+'" onclick="toggleEdit(this)">Изменить</button>'
+      +'<button class="btn-del" data-u="'+esc(u.username)+'" onclick="delUser(this)">Удалить</button>'
+      +'</div></td></tr>'
+      +'<tr class="erow" id="erow-'+uid+'" style="display:none"><td colspan="7">'
+      +'<span style="font-weight:600;margin-right:16px;color:#374151">'+esc(u.username)+'</span>'
+      +'Запросы:&nbsp;<input class="ei" type="number" min="0" placeholder="∞" id="et-'+uid+'" value="'+(u.tokens!==null&&u.tokens!==undefined?u.tokens:'')+'" style="width:80px;margin-right:12px">'
+      +'Дата оплаты:&nbsp;<input class="ei" type="date" id="ep-'+uid+'" value="'+(u.paid_at||'')+'" style="width:140px;margin-right:12px">'
+      +'<button class="btn-save" data-u="'+esc(u.username)+'" onclick="saveEdit(this)">Сохранить</button>'
+      +'</td></tr>';
+  });
+  h+='</tbody></table>';
+  w.innerHTML=h;
+}
 function loadUsers(){
-  fetch('/api/admin/users').then(function(r){return r.json();}).then(function(d){
-    var el=document.getElementById('user-list');
-    if(!d.users||!d.users.length){el.innerHTML='<div class="empty">Нет пользователей</div>';return;}
-    el.innerHTML=d.users.map(function(u){
-      return '<div class="user-row"><span class="user-name">'+esc(u)+'</span>'
-        +'<button class="btn-del" onclick="delUser('+JSON.stringify(u)+')">Удалить</button></div>';
-    }).join('');
+  fetch('/api/admin/users').then(function(r){return r.json();}).then(function(d){renderTable(d.users||[]);});
+}
+function toggleEdit(btn){
+  var uid=encodeURIComponent(btn.getAttribute('data-u'));
+  var row=document.getElementById('erow-'+uid);
+  row.style.display=row.style.display==='none'?'table-row':'none';
+}
+function saveEdit(btn){
+  var u=btn.getAttribute('data-u');
+  var uid=encodeURIComponent(u);
+  var tv=document.getElementById('et-'+uid).value.trim();
+  var pv=document.getElementById('ep-'+uid).value;
+  fetch('/api/admin/update',{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({username:u,tokens:tv===''?null:parseInt(tv),paid_at:pv||null})
+  }).then(function(r){return r.json();}).then(function(d){
+    if(d.ok)loadUsers();else alert(d.error||'Ошибка');
   });
 }
-function esc(s){var d=document.createElement('div');d.textContent=s;return d.innerHTML;}
-function showMsg(text,ok){
-  var m=document.getElementById('msg');
-  m.textContent=text;m.className='msg '+(ok?'ok':'err');m.style.display='block';
-  setTimeout(function(){m.style.display='none';},3000);
+function delUser(btn){
+  var u=btn.getAttribute('data-u');
+  if(!confirm('Удалить «'+u+'»?'))return;
+  fetch('/api/admin/delete',{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({username:u})
+  }).then(function(r){return r.json();}).then(function(d){
+    if(d.ok){showMsg('Пользователь «'+u+'» удалён',true);loadUsers();}
+    else alert(d.error||'Ошибка');
+  });
 }
 function addUser(e){
   e.preventDefault();
   var btn=document.getElementById('btn-add');
   btn.disabled=true;btn.textContent='Добавляю...';
+  var tv=document.getElementById('nt').value.trim();
   fetch('/api/admin/add',{method:'POST',headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({username:document.getElementById('nu').value,password:document.getElementById('np').value})
+    body:JSON.stringify({username:document.getElementById('nu').value,password:document.getElementById('np').value,
+      tokens:tv===''?null:parseInt(tv),paid_at:document.getElementById('nd').value||null})
   }).then(function(r){return r.json();}).then(function(d){
     btn.disabled=false;btn.textContent='Добавить';
-    if(d.ok){document.getElementById('nu').value='';document.getElementById('np').value='';loadUsers();showMsg('Пользователь добавлен',true);}
-    else{showMsg(d.error||'Ошибка',false);}
+    if(d.ok){['nu','np','nt','nd'].forEach(function(id){document.getElementById(id).value='';});loadUsers();showMsg('Пользователь добавлен',true);}
+    else showMsg(d.error||'Ошибка',false);
   }).catch(function(){btn.disabled=false;btn.textContent='Добавить';showMsg('Ошибка сети',false);});
-}
-function delUser(u){
-  if(!confirm('Удалить пользователя «'+u+'»?'))return;
-  fetch('/api/admin/delete',{method:'POST',headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({username:u})
-  }).then(function(r){return r.json();}).then(function(d){
-    if(d.ok){loadUsers();showMsg('Пользователь удалён',true);}
-    else{showMsg(d.error||'Ошибка',false);}
-  });
 }
 loadUsers();
 </script>
 </body>
 </html>"""
 
+BLOCKED_PAGE = """<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Доступ ограничен — ТН ВЭД</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:system-ui,sans-serif;background:#f0f4f8;min-height:100vh}
+.hdr{background:linear-gradient(135deg,#1D4ED8 0%,#2563EB 60%,#3B82F6 100%);color:#fff;padding:14px 24px;display:flex;align-items:center;justify-content:center;gap:16px;box-shadow:0 2px 12px rgba(37,99,235,.35)}
+.hdr-nav{margin-left:auto;display:flex;align-items:center;gap:8px}
+.hdr-nav a{color:rgba(255,255,255,.9);text-decoration:none;font-size:12px;font-weight:500;padding:6px 14px;border:1px solid rgba(255,255,255,.3);border-radius:6px}
+.ftr-user{font-size:12px;color:rgba(255,255,255,.85);font-weight:500}
+.ftr-sep{width:1px;height:16px;background:rgba(255,255,255,.25)}
+.main{display:flex;align-items:center;justify-content:center;min-height:calc(100vh - 56px);padding:40px 20px}
+.box{background:#fff;border-radius:16px;box-shadow:0 4px 24px rgba(0,0,0,.1);padding:48px 40px;text-align:center;max-width:460px;width:100%}
+.ico{font-size:56px;margin-bottom:20px}
+h2{font-size:20px;font-weight:700;color:#1a2942;margin-bottom:12px}
+p{font-size:14px;color:#6b7280;line-height:1.7}
+</style>
+</head>
+<body>
+<div class="hdr">
+  <div style="font-size:26px">🛃</div>
+  <div>
+    <div style="font-size:16px;font-weight:700">Тарифный калькулятор — ТН ВЭД Узбекистан</div>
+    <div style="font-size:11px;opacity:.8;margin-top:1px">ПП-181 от 14.05.2025</div>
+  </div>
+  <div class="hdr-nav">
+    <span class="ftr-user">👤 CURRENT_USER_PLACEHOLDER</span>
+    <div class="ftr-sep"></div>
+    <a href="/logout">Выйти</a>
+  </div>
+</div>
+<div class="main">
+  <div class="box">
+    <div class="ico">🚫</div>
+    <h2>У вас закончилось количество запросов</h2>
+    <p>Пополните баланс чтобы продолжить пользоваться программой.</p>
+  </div>
+</div>
+</body>
+</html>"""
 
 class Handler(BaseHTTPRequestHandler):
 
@@ -2311,8 +2439,7 @@ class Handler(BaseHTTPRequestHandler):
             if self._get_user() != 'Ildar Yusupov':
                 self._send_json({'error': 'forbidden'})
                 return
-            users = _auth.load_users()
-            self._send_json({'users': sorted(users.keys())})
+            self._send_json({'users': _auth.get_users_with_meta()})
             return
 
         if path == '/logout':
@@ -2328,6 +2455,11 @@ class Handler(BaseHTTPRequestHandler):
 
         if path in ('/', '/tariff'):
             user = self._get_user() or ''
+            allowed, reason = _auth.can_access(user)
+            if not allowed:
+                html = BLOCKED_PAGE.replace('CURRENT_USER_PLACEHOLDER', user)
+                self._send(200, 'text/html; charset=utf-8', html.encode())
+                return
             admin_link = '<a href="/admin">Пользователи</a>' if user == 'Ildar Yusupov' else ''
             html = PAGE.replace('COUNTRIES_JSON_PLACEHOLDER', country_items_json())
             html = html.replace('CURRENT_USER_PLACEHOLDER', user)
@@ -2335,6 +2467,10 @@ class Handler(BaseHTTPRequestHandler):
             self._send(200, 'text/html; charset=utf-8', html.encode())
 
         elif path == '/api/lookup':
+            user = self._get_user()
+            if not _auth.use_token(user):
+                self._send_json({'error': 'no_tokens'})
+                return
             code = params.get('code', '').strip()
             conn = get_db()
             row  = conn.execute('SELECT * FROM tnved WHERE code=?', (code,)).fetchone()
@@ -2426,11 +2562,27 @@ class Handler(BaseHTTPRequestHandler):
             if not username or not password:
                 self._send_json({'ok': False, 'error': 'Укажите логин и пароль'})
                 return
-            import hashlib as _hl
-            salt = os.urandom(16)
-            key  = _hl.pbkdf2_hmac('sha256', password.encode(), salt, 100000)
             users = _auth.load_users()
-            users[username] = f"pbkdf2:{salt.hex()}:{key.hex()}"
+            users[username] = {
+                'password':   _auth.hash_password(password),
+                'tokens':     data.get('tokens'),
+                'created_at': datetime.date.today().isoformat(),
+                'paid_at':    data.get('paid_at'),
+            }
+            _auth.save_users(users)
+            self._send_json({'ok': True})
+
+        elif path == '/api/admin/update':
+            if self._get_user() != 'Ildar Yusupov':
+                self._send_json({'ok': False, 'error': 'forbidden'})
+                return
+            username = data.get('username', '').strip()
+            users = _auth.load_users()
+            if username not in users:
+                self._send_json({'ok': False, 'error': 'Пользователь не найден'})
+                return
+            users[username]['tokens']  = data.get('tokens')
+            users[username]['paid_at'] = data.get('paid_at')
             _auth.save_users(users)
             self._send_json({'ok': True})
 
