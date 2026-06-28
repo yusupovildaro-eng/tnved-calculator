@@ -1718,7 +1718,7 @@ function _updateTokenBadge(tokens){
 function calculate(){
   if(!selectedCode){alert('Выберите код ТН ВЭД');return;}
   fetch('/api/calc_token',{method:'POST'}).then(r=>r.json()).then(function(d){
-    if(d&&d.error==='no_tokens'){showToast('🚫 У вас закончились запросы.<br>Пополните баланс для продолжения.',6000);return;}
+    if(d&&d.error==='no_tokens'){_updateTokenBadge(0);showToast('🚫 У вас закончились запросы.<br>Пополните баланс для продолжения.',6000);return;}
     _updateTokenBadge(d.tokens);
     _doCalc();
   });
