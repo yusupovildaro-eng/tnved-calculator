@@ -41,16 +41,31 @@ def api_register():
     users = _auth.load_users()
     if username in users:
         return jsonify({'ok': False, 'error': 'Пользователь с таким логином уже существует'})
+    reg_ip = (request.headers.get('X-Forwarded-For') or request.remote_addr or '').split(',')[0].strip()
+    ip_count = 0
+    for udata in users.values():
+        if isinstance(udata, dict):
+            if udata.get('inn') == inn:
+                return jsonify({'ok': False, 'error': 'Этот ИНН уже зарегистрирован в системе'})
+            ph = udata.get('phone', '').replace(' ', '').replace('-', '')
+            if ph and ph == phone.replace(' ', '').replace('-', ''):
+                return jsonify({'ok': False, 'error': 'Этот номер телефона уже зарегистрирован'})
+            if reg_ip and udata.get('reg_ip') == reg_ip:
+                ip_count += 1
+    if ip_count >= 3:
+        return jsonify({'ok': False, 'error': 'Превышен лимит регистраций с вашего IP-адреса'})
     users[username] = {
         'password':   _auth.hash_password(password),
         'tokens':     5,
         'created_at': datetime.date.today().isoformat(),
         'paid_at':    None,
+        'is_new':     True,
         'first_name': first_name,
         'last_name':  last_name,
         'inn':        inn,
         'phone':      phone,
         'org':        org,
+        'reg_ip':     reg_ip,
     }
     _auth.save_users(users)
     return jsonify({'ok': True})
@@ -90,6 +105,7 @@ def index():
     html = html.replace('CURRENT_USER_PLACEHOLDER', user)
     html = html.replace('ADMIN_LINK_PLACEHOLDER', admin_link)
     html = html.replace('TOKENS_BADGE_PLACEHOLDER', _auth.tokens_badge_html(user))
+    html = html.replace('IS_NEW_PLACEHOLDER', 'true' if _auth.check_and_clear_new(user) else 'false')
     return Response(html, mimetype='text/html; charset=utf-8')
 
 ADMIN_USER = 'Ildar Yusupov'

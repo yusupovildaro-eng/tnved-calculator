@@ -2180,6 +2180,31 @@ function treeNavBc(idx){
 
 </script>
 
+
+<!-- Welcome modal (только первый вход) -->
+<div id="welcome-overlay" style="display:none;position:fixed;inset:0;background:rgba(15,23,42,.6);z-index:9000;align-items:center;justify-content:center;padding:20px">
+  <div style="background:#fff;border-radius:20px;padding:48px 40px;max-width:440px;width:100%;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,.25);animation:wfade .3s ease">
+    <div style="font-size:56px;margin-bottom:16px">🎉</div>
+    <div style="font-size:22px;font-weight:800;color:#1a2942;margin-bottom:10px">Добро пожаловать!</div>
+    <div style="font-size:15px;color:#374151;line-height:1.6;margin-bottom:20px">Мы рады, что вы выбрали наш<br><b>Тарифный калькулятор ТН ВЭД</b>.</div>
+    <div style="background:linear-gradient(135deg,#eff6ff,#dbeafe);border-radius:12px;padding:16px 20px;margin-bottom:28px">
+      <div style="font-size:32px;margin-bottom:6px">🎁</div>
+      <div style="font-size:16px;font-weight:700;color:#1d4ed8;margin-bottom:4px">Вам подарено 5 бесплатных запросов</div>
+      <div style="font-size:13px;color:#3b82f6">Для продолжения работы свяжитесь с нами<br>для пополнения баланса запросов</div>
+    </div>
+    <button onclick="closeWelcome()" style="padding:13px 40px;background:#2563eb;color:#fff;border:none;border-radius:10px;font-size:15px;font-weight:700;cursor:pointer;width:100%">Начать работу →</button>
+  </div>
+</div>
+<style>@keyframes wfade{from{opacity:0;transform:scale(.92)}to{opacity:1;transform:scale(1)}}</style>
+<script>
+if(IS_NEW_PLACEHOLDER){
+  var ov=document.getElementById('welcome-overlay');
+  ov.style.display='flex';
+}
+function closeWelcome(){
+  document.getElementById('welcome-overlay').style.display='none';
+}
+</script>
 <div class="ftr">
   <a href="https://tarif.customs.uz/ru" target="_blank">customs.uz ↗</a>
 </div>
@@ -2789,6 +2814,7 @@ class Handler(BaseHTTPRequestHandler):
             html = html.replace('CURRENT_USER_PLACEHOLDER', user)
             html = html.replace('ADMIN_LINK_PLACEHOLDER', admin_link)
             html = html.replace('TOKENS_BADGE_PLACEHOLDER', _auth.tokens_badge_html(user))
+            html = html.replace('IS_NEW_PLACEHOLDER', 'true' if _auth.check_and_clear_new(user) else 'false')
             self._send(200, 'text/html; charset=utf-8', html.encode())
 
         elif path == '/api/lookup':
@@ -2876,16 +2902,35 @@ class Handler(BaseHTTPRequestHandler):
             if username in users:
                 self._send_json({'ok': False, 'error': 'Пользователь с таким логином уже существует'})
                 return
+            # Защита от повторной регистрации
+            reg_ip = self.headers.get('X-Forwarded-For', self.client_address[0]).split(',')[0].strip()
+            ip_count = 0
+            for udata in users.values():
+                if isinstance(udata, dict):
+                    if udata.get('inn') == inn:
+                        self._send_json({'ok': False, 'error': 'Этот ИНН уже зарегистрирован в системе'})
+                        return
+                    ph = udata.get('phone', '').replace(' ','').replace('-','')
+                    if ph and ph == phone.replace(' ','').replace('-',''):
+                        self._send_json({'ok': False, 'error': 'Этот номер телефона уже зарегистрирован'})
+                        return
+                    if udata.get('reg_ip') == reg_ip:
+                        ip_count += 1
+            if ip_count >= 3:
+                self._send_json({'ok': False, 'error': 'Превышен лимит регистраций с вашего IP-адреса'})
+                return
             users[username] = {
                 'password':   _auth.hash_password(password),
                 'tokens':     5,
                 'created_at': datetime.date.today().isoformat(),
                 'paid_at':    None,
+                'is_new':     True,
                 'first_name': first_name,
                 'last_name':  last_name,
                 'inn':        inn,
                 'phone':      phone,
                 'org':        org,
+                'reg_ip':     reg_ip,
             }
             _auth.save_users(users)
             self._send_json({'ok': True})

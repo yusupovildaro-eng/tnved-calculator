@@ -107,6 +107,17 @@ def use_token(username):
     save_users(users)
     return True
 
+def check_and_clear_new(username):
+    """Возвращает True если пользователь новый (первый вход), сбрасывает флаг."""
+    users = load_users()
+    if username not in users:
+        return False
+    if users[username].get('is_new'):
+        users[username]['is_new'] = False
+        save_users(users)
+        return True
+    return False
+
 def tokens_badge_html(username):
     """Возвращает HTML-бейдж с остатком токенов для хедера."""
     users = load_users()
