@@ -1478,8 +1478,10 @@ function hideAC(){document.getElementById('ac-list').style.display='none';}
 
 function selectCode(item){
   document.getElementById('search-inp').value=item.code+' — '+(item.name_ru||'').substring(0,50);
+  document.getElementById('search-clear').style.display='block';
   document.getElementById('manual-code').value=item.code;
   hideAC();
+  if(selectedCode && selectedCode.code === item.code) return;
   fetch('/api/lookup?code='+encodeURIComponent(item.code))
     .then(r=>r.json()).then(applyCodeInfo);
 }
@@ -1706,6 +1708,12 @@ function esc(s){ return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').repla
 // ─── Calculate (our method) ───────────────────────────────────────────────────
 function calculate(){
   if(!selectedCode){alert('Выберите код ТН ВЭД');return;}
+  fetch('/api/calc_token',{method:'POST'}).then(r=>r.json()).then(function(d){
+    if(d&&d.error==='no_tokens'){showToast('🚫 У вас закончились запросы.<br>Пополните баланс для продолжения.',6000);return;}
+    _doCalc();
+  });
+}
+function _doCalc(){
   var price   =+document.getElementById('price').value||0;
   var priceCur=document.getElementById('price-cur').value;
   var trans   =+document.getElementById('transport').value||0;
@@ -2504,10 +2512,6 @@ class Handler(BaseHTTPRequestHandler):
             self._send(200, 'text/html; charset=utf-8', html.encode())
 
         elif path == '/api/lookup':
-            user = self._get_user()
-            if not _auth.use_token(user):
-                self._send_json({'error': 'no_tokens'})
-                return
             code = params.get('code', '').strip()
             conn = get_db()
             row  = conn.execute('SELECT * FROM tnved WHERE code=?', (code,)).fetchone()
@@ -2589,6 +2593,16 @@ class Handler(BaseHTTPRequestHandler):
                 self.wfile.write(resp)
             else:
                 self._send_json({'ok': False, 'error': 'Неверный логин или пароль'})
+
+        elif path == '/api/calc_token':
+            user = self._get_user()
+            if not user:
+                self._send_json({'error': 'unauthorized'})
+                return
+            if not _auth.use_token(user):
+                self._send_json({'error': 'no_tokens'})
+                return
+            self._send_json({'ok': True})
 
         elif path == '/api/admin/add':
             if self._get_user() != 'Ildar Yusupov':

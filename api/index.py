@@ -64,8 +64,6 @@ def _require_admin():
 @app.route('/api/lookup')
 def api_lookup():
     if err := _require_auth(): return err
-    if not _auth.use_token(_current_user()):
-        return jsonify({'error': 'no_tokens'}), 403
     code = request.args.get('code', '').strip()
     conn = t.get_db()
     row = conn.execute('SELECT * FROM tnved WHERE code=?', (code,)).fetchone()
@@ -139,6 +137,13 @@ def admin_page():
 def admin_users():
     if err := _require_admin(): return err
     return jsonify({'users': _auth.get_users_with_meta()})
+
+@app.route('/api/calc_token', methods=['POST'])
+def calc_token():
+    if err := _require_auth(): return err
+    if not _auth.use_token(_current_user()):
+        return jsonify({'error': 'no_tokens'}), 403
+    return jsonify({'ok': True})
 
 @app.route('/api/admin/add', methods=['POST'])
 def admin_add():
