@@ -116,7 +116,13 @@ def tokens_badge_html(username):
     if tokens is None:
         return '<span class="tok-badge">∞ запросов</span>'
     cls = 'tok-badge tok-low' if tokens <= 5 else 'tok-badge'
-    return f'<span class="{cls}">🔢 {tokens} зап.</span>'
+    if tokens % 10 == 1 and tokens % 100 != 11:
+        word = 'запрос'
+    elif tokens % 10 in (2, 3, 4) and tokens % 100 not in (12, 13, 14):
+        word = 'запроса'
+    else:
+        word = 'запросов'
+    return f'<span class="{cls}">🔢 {tokens} {word}</span>'
 
 # ── Метаданные для админки ───────────────────────────────────────────────────
 
