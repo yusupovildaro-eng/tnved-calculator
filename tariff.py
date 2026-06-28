@@ -2464,12 +2464,13 @@ body{font-family:system-ui,sans-serif;background:#f0f4f8;min-height:100vh}
 .hdr{background:linear-gradient(135deg,#1D4ED8 0%,#2563EB 60%,#3B82F6 100%);color:#fff;padding:14px 24px;display:flex;align-items:center;gap:12px;box-shadow:0 2px 12px rgba(37,99,235,.35)}
 .hdr-back{margin-left:auto;color:rgba(255,255,255,.9);text-decoration:none;font-size:12px;font-weight:500;padding:6px 14px;border:1px solid rgba(255,255,255,.3);border-radius:6px;transition:all .15s}
 .hdr-back:hover{background:rgba(255,255,255,.2)}
-.wrap{max-width:900px;margin:28px auto;padding:0 16px}
+.wrap{max-width:1200px;margin:28px auto;padding:0 16px}
 .card{background:#fff;border-radius:12px;box-shadow:0 2px 12px rgba(0,0,0,.08);padding:24px;margin-bottom:24px}
 .card-title{font-size:15px;font-weight:700;color:#1a2942;margin-bottom:16px;padding-bottom:12px;border-bottom:1px solid #e5e7eb}
-table{width:100%;border-collapse:collapse;font-size:13px}
-th{padding:8px 12px;background:#f9fafb;border-bottom:2px solid #e5e7eb;text-align:left;font-weight:600;color:#6b7280;font-size:11px;text-transform:uppercase;letter-spacing:.4px;white-space:nowrap}
-td{padding:10px 12px;border-bottom:1px solid #f3f4f6;vertical-align:middle}
+.tbl-scroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
+table{width:100%;border-collapse:collapse;font-size:12px;min-width:900px}
+th{padding:8px 10px;background:#f9fafb;border-bottom:2px solid #e5e7eb;text-align:left;font-weight:600;color:#6b7280;font-size:10px;text-transform:uppercase;letter-spacing:.4px;white-space:nowrap}
+td{padding:9px 10px;border-bottom:1px solid #f3f4f6;vertical-align:middle;white-space:nowrap}
 tr:last-child td{border-bottom:none}
 .badge-inf{font-size:20px;color:#2563eb;font-weight:700;line-height:1}
 .badge-num{font-weight:700;color:#1a2942;font-size:14px}
@@ -2512,7 +2513,7 @@ input:focus{border-color:#2563eb}
 <div class="wrap">
   <div class="card">
     <div class="card-title">Пользователи</div>
-    <div id="tbl-wrap"><div class="empty">Загрузка...</div></div>
+    <div class="tbl-scroll"><div id="tbl-wrap"><div class="empty">Загрузка...</div></div></div>
   </div>
   <div class="card">
     <div class="card-title">Добавить пользователя</div>
@@ -2575,7 +2576,7 @@ function renderTable(users){
     h+='<tr id="row-'+uid+'">'
       +'<td><b>'+esc(u.username)+'</b></td>'
       +'<td>'+esc(fullname)+'</td>'
-      +'<td>'+(u.org?esc(u.org):'—')+'</td>'
+      +'<td style="max-width:160px;overflow:hidden;text-overflow:ellipsis" title="'+(u.org?esc(u.org):'')+'">'+( u.org?esc(u.org):'—')+'</td>'
       +'<td>'+(u.inn||'—')+'</td>'
       +'<td>'+(u.phone||'—')+'</td>'
       +'<td>'+tokHtml(u.tokens)+'</td>'
