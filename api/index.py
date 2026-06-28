@@ -48,6 +48,7 @@ def index():
     html = t.PAGE.replace('COUNTRIES_JSON_PLACEHOLDER', t.country_items_json())
     html = html.replace('CURRENT_USER_PLACEHOLDER', user)
     html = html.replace('ADMIN_LINK_PLACEHOLDER', admin_link)
+    html = html.replace('TOKENS_BADGE_PLACEHOLDER', _auth.tokens_badge_html(user))
     return Response(html, mimetype='text/html; charset=utf-8')
 
 ADMIN_USER = 'Ildar Yusupov'

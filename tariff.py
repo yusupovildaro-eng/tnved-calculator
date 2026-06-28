@@ -649,6 +649,8 @@ body{font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans
 .ftr a{color:rgba(255,255,255,.9);text-decoration:none;font-size:12px;font-weight:500;padding:6px 14px;border:1px solid rgba(255,255,255,.3);border-radius:var(--radius-sm);transition:all .15s;backdrop-filter:blur(4px)}
 .ftr a:hover{background:rgba(255,255,255,.2);border-color:rgba(255,255,255,.6)}
 .ftr-user{font-size:12px;color:rgba(255,255,255,.85);font-weight:500;white-space:nowrap}
+.tok-badge{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:600;padding:3px 9px;border-radius:20px;background:rgba(255,255,255,.18);color:#fff;white-space:nowrap;border:1px solid rgba(255,255,255,.3)}
+.tok-badge.tok-low{background:rgba(239,68,68,.35);border-color:rgba(239,68,68,.6)}
 .ftr-sep{width:1px;height:16px;background:rgba(255,255,255,.25)}
 
 /* ══ MAIN WRAP ══ */
@@ -876,6 +878,7 @@ details tr:hover td{background:var(--gray-50)}
   </div>
   <div class="hdr-nav">
     <span class="ftr-user">👤 CURRENT_USER_PLACEHOLDER</span>
+    TOKENS_BADGE_PLACEHOLDER
     <div class="ftr-sep"></div>
     ADMIN_LINK_PLACEHOLDER
     <a href="/logout">Выйти</a>
@@ -2497,6 +2500,7 @@ class Handler(BaseHTTPRequestHandler):
             html = PAGE.replace('COUNTRIES_JSON_PLACEHOLDER', country_items_json())
             html = html.replace('CURRENT_USER_PLACEHOLDER', user)
             html = html.replace('ADMIN_LINK_PLACEHOLDER', admin_link)
+            html = html.replace('TOKENS_BADGE_PLACEHOLDER', _auth.tokens_badge_html(user))
             self._send(200, 'text/html; charset=utf-8', html.encode())
 
         elif path == '/api/lookup':

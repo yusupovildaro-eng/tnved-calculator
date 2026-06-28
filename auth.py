@@ -107,6 +107,17 @@ def use_token(username):
     save_users(users)
     return True
 
+def tokens_badge_html(username):
+    """Возвращает HTML-бейдж с остатком токенов для хедера."""
+    users = load_users()
+    if username not in users:
+        return ''
+    tokens = users[username].get('tokens')
+    if tokens is None:
+        return '<span class="tok-badge">∞ запросов</span>'
+    cls = 'tok-badge tok-low' if tokens <= 5 else 'tok-badge'
+    return f'<span class="{cls}">🔢 {tokens} зап.</span>'
+
 # ── Метаданные для админки ───────────────────────────────────────────────────
 
 def get_users_with_meta():
