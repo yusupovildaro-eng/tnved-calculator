@@ -1715,11 +1715,26 @@ function _updateTokenBadge(tokens){
   el.classList.toggle('tok-low', tokens<=5);
 }
 
+var _lastCalcSnap=null;
+function _calcSnap(){
+  var v=function(id){return (document.getElementById(id)||{}).value||'';};
+  return [
+    selectedCode?selectedCode.code:'',
+    v('price'), v('price-cur'), v('transport'), v('transport-cur'),
+    v('qty-main'), v('qty-pcs'), v('brv'), v('rate-usd'),
+    v('country-sending'), v('country-origin'), v('country-trade'),
+    document.getElementById('dir-export').checked?'export':'import'
+  ].join('|');
+}
+
 function calculate(){
   if(!selectedCode){alert('Выберите код ТН ВЭД');return;}
+  var snap=_calcSnap();
+  if(snap===_lastCalcSnap){_doCalc();return;}  // те же данные — токен не тратим
   fetch('/api/calc_token',{method:'POST'}).then(r=>r.json()).then(function(d){
     if(d&&d.error==='no_tokens'){_updateTokenBadge(0);showToast('🚫 У вас закончились запросы.<br>Пополните баланс для продолжения.',6000);return;}
     _updateTokenBadge(d.tokens);
+    _lastCalcSnap=snap;
     _doCalc();
   });
 }
