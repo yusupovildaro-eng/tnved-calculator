@@ -2423,13 +2423,12 @@ class Handler(BaseHTTPRequestHandler):
             if not username or not password:
                 self._send_json({'ok': False, 'error': 'Укажите логин и пароль'})
                 return
-            users = _auth.load_users()
-            import hashlib as _hl, os as _os
-            salt = _os.urandom(16)
+            import hashlib as _hl
+            salt = os.urandom(16)
             key  = _hl.pbkdf2_hmac('sha256', password.encode(), salt, 100000)
+            users = _auth.load_users()
             users[username] = f"pbkdf2:{salt.hex()}:{key.hex()}"
-            with open(_auth.USERS_FILE, 'w', encoding='utf-8') as f:
-                json.dump(users, f, indent=2, ensure_ascii=False)
+            _auth.save_users(users)
             self._send_json({'ok': True})
 
         elif path == '/api/admin/delete':
@@ -2442,8 +2441,7 @@ class Handler(BaseHTTPRequestHandler):
                 self._send_json({'ok': False, 'error': 'Пользователь не найден'})
                 return
             del users[username]
-            with open(_auth.USERS_FILE, 'w', encoding='utf-8') as f:
-                json.dump(users, f, indent=2, ensure_ascii=False)
+            _auth.save_users(users)
             self._send_json({'ok': True})
 
         else:

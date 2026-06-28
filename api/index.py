@@ -135,12 +135,11 @@ def admin_add():
     password = data.get('password', '')
     if not username or not password:
         return jsonify({'ok': False, 'error': 'Укажите логин и пароль'})
-    users = _auth.load_users()
     salt  = os.urandom(16)
     key   = hashlib.pbkdf2_hmac('sha256', password.encode(), salt, 100000)
+    users = _auth.load_users()
     users[username] = f"pbkdf2:{salt.hex()}:{key.hex()}"
-    with open(_auth.USERS_FILE, 'w', encoding='utf-8') as f:
-        import json; json.dump(users, f, indent=2, ensure_ascii=False)
+    _auth.save_users(users)
     return jsonify({'ok': True})
 
 @app.route('/api/admin/delete', methods=['POST'])
@@ -152,7 +151,6 @@ def admin_delete():
     if username not in users:
         return jsonify({'ok': False, 'error': 'Пользователь не найден'})
     del users[username]
-    with open(_auth.USERS_FILE, 'w', encoding='utf-8') as f:
-        import json; json.dump(users, f, indent=2, ensure_ascii=False)
+    _auth.save_users(users)
     return jsonify({'ok': True})
 

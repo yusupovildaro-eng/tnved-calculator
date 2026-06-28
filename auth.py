@@ -1,16 +1,32 @@
 import json, hmac, hashlib, time, base64, os
+import kv as _kv
 
-USERS_FILE = os.path.join(os.path.dirname(__file__), 'users.json')
-SECRET     = os.environ.get('AUTH_SECRET', 'tnved-dev-secret-change-me')
-COOKIE     = 'tnved_sess'
+USERS_FILE   = os.path.join(os.path.dirname(__file__), 'users.json')
+SECRET       = os.environ.get('AUTH_SECRET', 'tnved-dev-secret-change-me')
+COOKIE       = 'tnved_sess'
 SESSION_SECS = 7 * 24 * 3600  # 7 дней
+_KV_KEY      = 'tnved:users'
 
 def load_users():
+    if _kv.AVAILABLE:
+        try:
+            raw = _kv.get(_KV_KEY)
+            if raw:
+                return json.loads(raw)
+        except Exception:
+            pass
     try:
         with open(USERS_FILE, encoding='utf-8') as f:
             return json.load(f)
     except (FileNotFoundError, json.JSONDecodeError):
         return {}
+
+def save_users(users):
+    if _kv.AVAILABLE:
+        _kv.set(_KV_KEY, json.dumps(users, ensure_ascii=False))
+    else:
+        with open(USERS_FILE, 'w', encoding='utf-8') as f:
+            json.dump(users, f, indent=2, ensure_ascii=False)
 
 def check_password(stored_hash, password):
     try:
