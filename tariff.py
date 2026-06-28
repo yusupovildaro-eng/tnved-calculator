@@ -660,6 +660,8 @@ body{font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans
 /* ══ SEARCH BAR ══ */
 .search-bar{display:flex;align-items:center;gap:10px;padding:16px 18px;flex-wrap:wrap}
 .search-wrap{position:relative;flex:1;min-width:200px;max-width:460px}
+.search-clear{position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--gray-400);font-size:18px;line-height:1;padding:0;display:none}
+.search-clear:hover{color:var(--gray-600)}
 .search-inp{width:100%;padding:10px 14px;border:1.5px solid var(--gray-200);border-radius:var(--radius-sm);font-size:14px;font-family:inherit;outline:none;transition:border-color .15s,box-shadow .15s;background:#fff}
 .search-inp:focus{border-color:var(--primary);box-shadow:0 0 0 3px rgba(37,99,235,.12)}
 .search-inp::placeholder{color:var(--gray-400)}
@@ -897,7 +899,9 @@ details tr:hover td{background:var(--gray-50)}
     <div class="search-bar">
       <div class="search-wrap">
         <input type="text" id="search-inp" class="search-inp"
-               placeholder="Введите наименование товара или код ТН ВЭД..." autocomplete="off">
+               placeholder="Введите наименование товара или код ТН ВЭД..." autocomplete="off"
+               style="padding-right:32px">
+        <button class="search-clear" id="search-clear" onclick="clearSearch()" title="Очистить">✕</button>
         <div id="ac-list"></div>
       </div>
       <button class="btn-search" onclick="doSearch()" title="Найти">🔍</button>
@@ -1431,9 +1435,18 @@ function effectiveDutyPct(){
   return selectedCode.poshlina_pct || 0;
 }
 
+function clearSearch(){
+  var inp=document.getElementById('search-inp');
+  inp.value='';
+  document.getElementById('search-clear').style.display='none';
+  hideAC();
+  inp.focus();
+}
+
 // ─── Autocomplete ─────────────────────────────────────────────────────────────
 var acTimer=null;
 document.getElementById('search-inp').addEventListener('input',function(){
+  document.getElementById('search-clear').style.display=this.value?'block':'none';
   clearTimeout(acTimer);
   var q=this.value.trim();
   if(q.length<2){hideAC();return;}
