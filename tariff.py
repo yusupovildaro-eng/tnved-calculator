@@ -1706,10 +1706,20 @@ function getCountryName(code){
 function esc(s){ return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 
 // ─── Calculate (our method) ───────────────────────────────────────────────────
+function _updateTokenBadge(tokens){
+  var el=document.querySelector('.tok-badge');
+  if(!el) return;
+  if(tokens===null||tokens===undefined){el.textContent='∞ запросов';el.classList.remove('tok-low');return;}
+  var w=tokens===1?'запрос':tokens%10>=2&&tokens%10<=4&&(tokens%100<10||tokens%100>=20)?'запроса':'запросов';
+  el.textContent='🔢 '+tokens+' '+w;
+  el.classList.toggle('tok-low', tokens<=5);
+}
+
 function calculate(){
   if(!selectedCode){alert('Выберите код ТН ВЭД');return;}
   fetch('/api/calc_token',{method:'POST'}).then(r=>r.json()).then(function(d){
     if(d&&d.error==='no_tokens'){showToast('🚫 У вас закончились запросы.<br>Пополните баланс для продолжения.',6000);return;}
+    _updateTokenBadge(d.tokens);
     _doCalc();
   });
 }
@@ -2602,7 +2612,9 @@ class Handler(BaseHTTPRequestHandler):
             if not _auth.use_token(user):
                 self._send_json({'error': 'no_tokens'})
                 return
-            self._send_json({'ok': True})
+            users = _auth.load_users()
+            remaining = users.get(user, {}).get('tokens')
+            self._send_json({'ok': True, 'tokens': remaining})
 
         elif path == '/api/admin/add':
             if self._get_user() != 'Ildar Yusupov':

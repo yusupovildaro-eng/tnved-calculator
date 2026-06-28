@@ -141,9 +141,12 @@ def admin_users():
 @app.route('/api/calc_token', methods=['POST'])
 def calc_token():
     if err := _require_auth(): return err
-    if not _auth.use_token(_current_user()):
+    user = _current_user()
+    if not _auth.use_token(user):
         return jsonify({'error': 'no_tokens'}), 403
-    return jsonify({'ok': True})
+    users = _auth.load_users()
+    remaining = users.get(user, {}).get('tokens')
+    return jsonify({'ok': True, 'tokens': remaining})
 
 @app.route('/api/admin/add', methods=['POST'])
 def admin_add():
