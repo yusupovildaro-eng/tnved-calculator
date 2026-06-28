@@ -37,9 +37,11 @@ def logout():
 @app.route('/')
 @app.route('/tariff')
 def index():
-    if not _current_user():
+    user = _current_user()
+    if not user:
         return redirect('/login')
     html = t.PAGE.replace('COUNTRIES_JSON_PLACEHOLDER', t.country_items_json())
+    html = html.replace('CURRENT_USER_PLACEHOLDER', user)
     return Response(html, mimetype='text/html; charset=utf-8')
 
 def _require_auth():

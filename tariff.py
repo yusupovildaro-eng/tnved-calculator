@@ -641,9 +641,11 @@ body{font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans
 .hdr-logo{font-size:26px;filter:drop-shadow(0 1px 2px rgba(0,0,0,.2))}
 .hdr-title{font-size:16px;font-weight:700;letter-spacing:-.2px}
 .hdr-sub{font-size:11px;opacity:.8;margin-top:1px;font-weight:400}
-.hdr-nav{margin-left:auto;display:flex;gap:8px}
+.hdr-nav{margin-left:auto;display:flex;align-items:center;gap:8px}
 .hdr-nav a{color:rgba(255,255,255,.9);text-decoration:none;font-size:12px;font-weight:500;padding:6px 12px;border:1px solid rgba(255,255,255,.3);border-radius:var(--radius-sm);transition:all .15s;backdrop-filter:blur(4px)}
 .hdr-nav a:hover{background:rgba(255,255,255,.2);border-color:rgba(255,255,255,.6)}
+.hdr-user{font-size:12px;color:rgba(255,255,255,.85);font-weight:500;padding:0 4px;white-space:nowrap}
+.hdr-sep{width:1px;height:16px;background:rgba(255,255,255,.25);margin:0 2px}
 
 /* ══ MAIN WRAP ══ */
 .main-wrap{max-width:1000px;margin:0 auto;padding:20px 16px}
@@ -866,7 +868,10 @@ details tr:hover td{background:var(--gray-50)}
     <div class="hdr-sub">ПП-181 от 14.05.2025 · с учётом страны происхождения</div>
   </div>
   <div class="hdr-nav">
+    <span class="hdr-user">👤 CURRENT_USER_PLACEHOLDER</span>
+    <div class="hdr-sep"></div>
     <a href="https://tarif.customs.uz/ru" target="_blank">customs.uz ↗</a>
+    <a href="/logout">Выйти</a>
   </div>
 </div>
 
@@ -2199,6 +2204,7 @@ class Handler(BaseHTTPRequestHandler):
 
         if path in ('/', '/tariff'):
             html = PAGE.replace('COUNTRIES_JSON_PLACEHOLDER', country_items_json())
+            html = html.replace('CURRENT_USER_PLACEHOLDER', self._get_user() or '')
             self._send(200, 'text/html; charset=utf-8', html.encode())
 
         elif path == '/api/lookup':
