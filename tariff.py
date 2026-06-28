@@ -2187,6 +2187,37 @@ function treeNavBc(idx){
 </html>
 """
 
+MOVED_PAGE = """<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Мы переехали</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:system-ui,sans-serif;background:#f0f4f8;display:flex;align-items:center;justify-content:center;min-height:100vh}
+.card{background:#fff;border-radius:20px;box-shadow:0 8px 40px rgba(0,0,0,.12);padding:56px 48px;text-align:center;max-width:440px;width:100%;margin:16px}
+.icon{font-size:56px;margin-bottom:20px}
+.label{font-size:13px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:#6b7280;margin-bottom:12px}
+.heading{font-size:28px;font-weight:800;color:#1a2942;margin-bottom:8px;line-height:1.2}
+.new-url{font-size:20px;font-weight:700;color:#2563eb;margin-bottom:32px}
+.btn{display:inline-block;padding:14px 40px;background:#2563eb;color:#fff;text-decoration:none;border-radius:10px;font-size:16px;font-weight:700;transition:background .15s}
+.btn:hover{background:#1d4ed8}
+.note{margin-top:24px;font-size:12px;color:#9ca3af}
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="icon">🏠</div>
+  <div class="label">Новый адрес</div>
+  <div class="heading">МЫ ПЕРЕЕХАЛИ НА</div>
+  <div class="new-url">calc.aloqa.uz</div>
+  <a class="btn" href="https://calc.aloqa.uz">Перейти на новый сайт →</a>
+  <div class="note">Этот адрес больше не используется. Обновите закладки.</div>
+</div>
+</body>
+</html>"""
+
 LOGIN_PAGE = """<!DOCTYPE html>
 <html lang="ru">
 <head>

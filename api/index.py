@@ -7,6 +7,11 @@ import auth as _auth
 
 app = Flask(__name__)
 
+@app.before_request
+def moved_check():
+    if 'tnved-db.vercel.app' in request.headers.get('Host', ''):
+        return Response(t.MOVED_PAGE, mimetype='text/html; charset=utf-8')
+
 def _current_user():
     return _auth.verify_session(request.cookies.get(_auth.COOKIE))
 
